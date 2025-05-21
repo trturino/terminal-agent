@@ -1,27 +1,30 @@
-import { db } from '../config/Database';
-import { Device, DeviceData } from '../models/Device';
-import { IDeviceService } from '../interfaces/IDeviceService';
+import { Repository } from 'typeorm';
+import { DeviceEntity } from '../entities/Device';
+import { Device } from '../models/Device';
 import { IFileService } from '../interfaces/IFileService';
+import { IDeviceService } from '../interfaces/IDeviceService';
+import { DB } from '../database/DB';
 
 export class DeviceService implements IDeviceService {
-  private fileService: IFileService;
+  private deviceRepository: Repository<DeviceEntity>;
 
-  constructor(fileService: IFileService) {
-    this.fileService = fileService;
+  constructor(private readonly fileService: IFileService) {
+    // We'll initialize the repository in the init method
+    this.deviceRepository = null as unknown as Repository<DeviceEntity>;
   }
+
+  // Initialize the repository with the database connection
+  public async init(): Promise<void> {
+    this.deviceRepository = DB.getDataSource().getRepository(DeviceEntity);
+  }
+
   async findById(id: string | number): Promise<Device | null> {
-    const isNumericId = typeof id === 'number' || !isNaN(Number(id));
-    const query = isNumericId
-      ? 'SELECT * FROM devices WHERE device_id = $1'
-      : 'SELECT * FROM devices WHERE id = $1';
+    const where = typeof id === 'number' || !isNaN(Number(id))
+      ? { deviceId: Number(id) }
+      : { id };
 
-    const result = await db.getPool().query<DeviceData>(
-      query,
-      [id]
-    );
-
-    if (!result.rows[0]) return null;
-    return this.mapToDevice(result.rows[0]);
+    const deviceEntity = await this.deviceRepository.findOne({ where });
+    return deviceEntity ? this.mapToDevice(deviceEntity) : null;
   }
 
   /**
@@ -34,10 +37,8 @@ export class DeviceService implements IDeviceService {
     }
 
     // Update the device with new filename
-    const updatedDevice = await this.createOrUpdate({
-      ...device,
-      filename: newFilename
-    });
+    device.filename = newFilename;
+    const updatedDevice = await this.createOrUpdate(device);
 
     // Clean up old file if it exists and is different from the new one
     if (oldFilename && oldFilename !== newFilename) {
@@ -52,93 +53,102 @@ export class DeviceService implements IDeviceService {
     return updatedDevice;
   }
 
-  async createOrUpdate(deviceData: Omit<DeviceData, 'created_at' | 'updated_at' | 'last_seen_at'>): Promise<Device> {
-    const {
-      device_id,
-      id,
-      access_token,
-      firmware_version,
-      host,
-      user_agent,
-      width,
-      height,
-      refresh_rate,
-      battery_voltage,
-      rssi,
-      filename
-    } = deviceData;
+  async createOrUpdate(deviceData: Partial<Device>): Promise<Device> {
+    let deviceEntity: DeviceEntity;
 
-    // If we have a device_id, this is an update
-    if (device_id) {
-      const result = await db.getPool().query<DeviceData>(
-        `UPDATE devices SET
-          access_token = $2,
-          firmware_version = $3,
-          host = $4,
-          user_agent = $5,
-          width = $6,
-          height = $7,
-          refresh_rate = $8,
-          battery_voltage = $9,
-          rssi = $10,
-          filename = $11,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE device_id = $1
-        RETURNING *`,
-        [device_id, access_token, firmware_version, host, user_agent,
-          width, height, refresh_rate, battery_voltage, rssi, filename]
-      );
-      return this.mapToDevice(result.rows[0]);
+    if (deviceData.deviceId) {
+      // Update existing device
+      const existingDevice = await this.deviceRepository.findOne({ where: { deviceId: deviceData.deviceId } });
+      if (!existingDevice) {
+        throw new Error(`Device with ID ${deviceData.deviceId} not found`);
+      }
+      deviceEntity = existingDevice;
+
+      // Update fields
+      if (deviceData.id) deviceEntity.id = deviceData.id;
+      if (deviceData.accessToken) deviceEntity.accessToken = deviceData.accessToken;
+      if (deviceData.firmwareVersion) deviceEntity.firmwareVersion = deviceData.firmwareVersion;
+      if (deviceData.host) deviceEntity.host = deviceData.host;
+      if (deviceData.userAgent) deviceEntity.userAgent = deviceData.userAgent;
+      if (deviceData.width) deviceEntity.width = deviceData.width;
+      if (deviceData.height) deviceEntity.height = deviceData.height;
+      if (deviceData.refreshRate) deviceEntity.refreshRate = deviceData.refreshRate;
+      if (deviceData.batteryVoltage) deviceEntity.batteryVoltage = deviceData.batteryVoltage;
+      if (deviceData.rssi) deviceEntity.rssi = deviceData.rssi;
+      if (deviceData.filename) deviceEntity.filename = deviceData.filename;
+      if (deviceData.lastSeenAt) deviceEntity.lastSeenAt = deviceData.lastSeenAt;
     } else {
-      // This is an insert
-      const result = await db.getPool().query<DeviceData>(
-        `INSERT INTO devices (
-          id, access_token, firmware_version, host, user_agent,
-          width, height, refresh_rate, battery_voltage, rssi, filename
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        ON CONFLICT (id) DO UPDATE SET
-          access_token = EXCLUDED.access_token,
-          firmware_version = COALESCE(EXCLUDED.firmware_version, devices.firmware_version),
-          host = COALESCE(EXCLUDED.host, devices.host),
-          user_agent = COALESCE(EXCLUDED.user_agent, devices.user_agent),
-          width = COALESCE(EXCLUDED.width, devices.width),
-          height = COALESCE(EXCLUDED.height, devices.height),
-          refresh_rate = COALESCE(EXCLUDED.refresh_rate, devices.refresh_rate),
-          battery_voltage = COALESCE(EXCLUDED.battery_voltage, devices.battery_voltage),
-          rssi = COALESCE(EXCLUDED.rssi, devices.rssi),
-          filename = COALESCE(EXCLUDED.filename, devices.filename),
-          updated_at = CURRENT_TIMESTAMP
-        RETURNING *`,
-        [id, access_token, firmware_version, host, user_agent,
-          width, height, refresh_rate, battery_voltage, rssi, filename]
-      );
-      return this.mapToDevice(result.rows[0]);
+      // Create new device
+      deviceEntity = this.deviceRepository.create({
+        id: deviceData.id,
+        accessToken: deviceData.accessToken,
+        firmwareVersion: deviceData.firmwareVersion,
+        host: deviceData.host,
+        userAgent: deviceData.userAgent,
+        width: deviceData.width,
+        height: deviceData.height,
+        refreshRate: deviceData.refreshRate,
+        batteryVoltage: deviceData.batteryVoltage,
+        rssi: deviceData.rssi,
+        filename: deviceData.filename,
+        lastSeenAt: deviceData.lastSeenAt
+      });
     }
+
+    // Save the entity
+    const savedDevice = await this.deviceRepository.save(deviceEntity);
+
+    // Return a mapped Device instance
+    return this.mapToDevice(savedDevice);
   }
-
-
 
   async registerDevice(
     id: string,
     accessToken: string,
     firmwareVersion?: string
   ): Promise<Device> {
-    return this.createOrUpdate({
-      id,
-      access_token: accessToken,
-      firmware_version: firmwareVersion,
-    });
+    // First try to find existing device by id
+    let device = await this.findById(id);
+
+    if (device) {
+      // Update existing device
+      device.accessToken = accessToken;
+      if (firmwareVersion) {
+        device.firmwareVersion = firmwareVersion;
+      }
+    } else {
+      // Create new device
+      device = new Device({
+        id,
+        accessToken,
+        firmwareVersion
+      });
+    }
+
+    return this.createOrUpdate(device);
   }
 
   async getDevice(id: string): Promise<Device | null> {
     return this.findById(id);
   }
 
-  private mapToDevice(data: DeviceData): Device {
-    const device = new Device(data);
-    device.created_at = data.created_at;
-    device.updated_at = data.updated_at;
-    device.last_seen_at = data.last_seen_at;
-    return device;
+  private mapToDevice(entity: DeviceEntity): Device {
+    return new Device({
+      deviceId: entity.deviceId,
+      id: entity.id,
+      accessToken: entity.accessToken,
+      firmwareVersion: entity.firmwareVersion,
+      host: entity.host,
+      userAgent: entity.userAgent,
+      width: entity.width,
+      height: entity.height,
+      refreshRate: entity.refreshRate,
+      batteryVoltage: entity.batteryVoltage,
+      rssi: entity.rssi,
+      filename: entity.filename,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      lastSeenAt: entity.lastSeenAt
+    });
   }
 }

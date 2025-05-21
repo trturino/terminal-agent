@@ -7,6 +7,15 @@ export interface S3Config {
   forcePathStyle?: boolean;
 }
 
+export interface DatabaseConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  database: string;
+  ssl: boolean | { rejectUnauthorized: boolean };
+}
+
 export class Config {
   public readonly port = Number(process.env.PORT ?? 3000);
   public readonly host = process.env.HOST ?? '0.0.0.0';
@@ -21,9 +30,11 @@ export class Config {
   public readonly logLevel = process.env.LOG_LEVEL ?? 'info';
   public readonly nodeEnv = process.env.NODE_ENV ?? 'development';
   public readonly s3: S3Config;
+  public readonly db: DatabaseConfig;
 
   constructor() {
     this.s3 = this.getS3Config();
+    this.db = this.getDbConfig();
   }
 
   private getS3Config(): S3Config {
@@ -44,5 +55,18 @@ export class Config {
     }
 
     return config;
+  }
+
+  private getDbConfig(): DatabaseConfig {
+    const ssl = process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false;
+    
+    return {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      database: process.env.DB_NAME || 'terminal_agent',
+      ssl,
+    };
   }
 }

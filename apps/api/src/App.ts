@@ -12,11 +12,12 @@ import { CorsPlugin } from './plugins/CorsPlugin.js';
 import { RateLimitPlugin } from './plugins/RateLimitPlugin.js';
 import { SwaggerPlugin } from './plugins/SwaggerPlugin.js';
 import { runMigrations } from './utils/Migrate.js';
-import { db } from './config/Database.js';
 
 export class App {
     private readonly server: FastifyInstance;
     private readonly config = new Config();
+    private deviceService: DeviceService | null = null;
+    private fileService: FileService | null = null;
 
     constructor() {
         const cfg = this.config;
@@ -62,35 +63,42 @@ export class App {
     }
 
     private registerControllers(): void {
-        // Initialize services with dependency injection
-        const s3Config: any = {
-            region: this.config.s3.region,
-            endpoint: this.config.s3.endpoint,
-            forcePathStyle: true,
-        };
-
-        // Add credentials if they exist in config
-        if ('accessKeyId' in this.config.s3 && 'secretAccessKey' in this.config.s3) {
-            s3Config.credentials = {
-                accessKeyId: (this.config.s3 as any).accessKeyId,
-                secretAccessKey: (this.config.s3 as any).secretAccessKey,
+        try {
+            // Initialize services with dependency injection
+            const s3Config: any = {
+                region: this.config.s3.region,
+                endpoint: this.config.s3.endpoint,
+                forcePathStyle: true,
             };
+
+            // Add credentials if they exist in config
+            if ('accessKeyId' in this.config.s3 && 'secretAccessKey' in this.config.s3) {
+                s3Config.credentials = {
+                    accessKeyId: (this.config.s3 as any).accessKeyId,
+                    secretAccessKey: (this.config.s3 as any).secretAccessKey,
+                };
+            }
+
+            const s3Client = new S3Client(s3Config);
+
+            this.fileService = new FileService(s3Client, this.config.s3.bucketName);
+            this.deviceService = new DeviceService(this.fileService);
+            
+            // Initialize controllers with their dependencies
+            const deviceController = new DeviceController(this.deviceService, this.fileService);
+            
+            // Initialize controllers
+            const healthController = new HealthController();
+            
+            // Register routes
+            deviceController.registerRoutes(this.server);
+            healthController.registerRoutes(this.server);
+            
+            this.server.log.info('Controllers registered successfully');
+        } catch (error) {
+            this.server.log.error(error, 'Failed to register controllers:', error);
+            throw error;
         }
-
-        const s3Client = new S3Client(s3Config);
-
-        const fileService = new FileService(s3Client, this.config.s3.bucketName);
-        const deviceService = new DeviceService(fileService);
-        
-        // Initialize controllers with their dependencies
-        const deviceController = new DeviceController(deviceService, fileService);
-        
-        // Initialize controllers
-        const healthController = new HealthController();
-        
-        // Register routes
-        deviceController.registerRoutes(this.server);
-        healthController.registerRoutes(this.server);
     }
 
     private registerErrorHandler(): void {
@@ -108,7 +116,7 @@ export class App {
 
     private registerShutdownHooks(): void {
         const shutdown = async () => {
-            this.server.log.info('🛑 Shutting down...');
+            this.server.log.info(' Shutting down...');
             await this.server.close();
             process.exit(0);
         };
@@ -118,50 +126,56 @@ export class App {
 
     private async initializeDatabase(): Promise<void> {
         try {
+            // Initialize the database connection
+            const database = await import('./database/connection.js');
+            const connection = await database.databaseConnection.getConnection();
+            
+            // Run migrations
             await runMigrations();
-            this.server.log.info('Database migrations completed successfully');
+            
+            // Initialize services that depend on the database
+            if (this.deviceService) {
+                await this.deviceService.init();
+            }
+            
+            this.server.log.info('Database initialized successfully');
         } catch (error) {
-            this.server.log.error('Failed to run database migrations:', error);
+            this.server.log.error(error, 'Failed to initialize database');
             throw error;
         }
     }
 
     public async start(): Promise<void> {
         try {
-            // Initialize database and run migrations
             await this.initializeDatabase();
-
-            // Register plugins and controllers
             await this.registerPlugins();
-            
             this.registerControllers();
             this.registerErrorHandler();
             this.registerShutdownHooks();
 
-            // Start the server
-            await this.server.ready();
-            await this.server.listen({
-                port: this.config.port,
-                host: this.config.host,
-            });
-
+            await this.server.listen({ port: this.config.port, host: this.config.host });
+            this.server.swagger();
             this.server.log.info(`Server is running on ${this.config.host}:${this.config.port}`);
-        } catch (error) {
-            this.server.log.error(error, 'Failed to start server:');
-            await db.close().catch(err =>
-                this.server.log.error('Error closing database connection:', err)
-            );
+        } catch (err) {
+            this.server.log.error(err, 'Failed to start server');
+            await this.stop();
             process.exit(1);
         }
     }
 
     public async stop(): Promise<void> {
         try {
+            // Close the HTTP server
             await this.server.close();
-            await db.close();
+            
+            // Close the database connection
+            const database = await import('./database/connection.js');
+            await database.databaseConnection.close();
+            
+            this.server.log.info('Server stopped successfully');
         } catch (error) {
-            this.server.log.error('Error during shutdown:', error);
-            process.exit(1);
+            this.server.log.error(error, 'Error during server shutdown');
+            throw error;
         }
     }
 }
