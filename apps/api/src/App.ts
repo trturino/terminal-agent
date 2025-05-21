@@ -121,7 +121,7 @@ export class App {
             await runMigrations();
             this.server.log.info('Database migrations completed successfully');
         } catch (error) {
-            this.server.log.error('Failed to run database migrations:', error);
+            this.server.log.error(error, 'Failed to run database migrations:');
             throw error;
         }
     }
@@ -149,7 +149,7 @@ export class App {
         } catch (error) {
             this.server.log.error(error, 'Failed to start server:');
             await db.close().catch(err =>
-                this.server.log.error('Error closing database connection:', err)
+                this.server.log.error(err, 'Error closing database connection:')
             );
             process.exit(1);
         }
@@ -160,7 +160,7 @@ export class App {
             await this.server.close();
             await db.close();
         } catch (error) {
-            this.server.log.error('Error during shutdown:', error);
+            this.server.log.error(error, 'Error during shutdown:');
             process.exit(1);
         }
     }
