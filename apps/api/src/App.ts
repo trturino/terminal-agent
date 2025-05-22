@@ -157,7 +157,7 @@ export class App {
             await runMigrations();
             this.server.log.info('Database migrations completed successfully');
         } catch (error) {
-            this.server.log.error(error, 'Failed to run database migrations:');
+            this.server.log.error(error, 'Failed to initialize database:');
             throw error;
         }
     }

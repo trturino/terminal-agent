@@ -1,7 +1,7 @@
-import { Plugin, PluginModel } from "../models/Plugin";
+import { Plugin } from "../models/Plugin";
 import { S3Service } from "./S3Service";
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../config/Database';
+import { db, QueryResult } from '../config/Database';
 
 export class PluginService {
   private s3Service: S3Service;
@@ -15,6 +15,9 @@ export class PluginService {
   /**
    * Create a new plugin with the provided zip file
    */
+  /**
+   * Create a new plugin
+   */
   public async createPlugin(
     name: string,
     version: string,
@@ -22,32 +25,68 @@ export class PluginService {
     author?: string | null,
     enabled: boolean = true
   ): Promise<Plugin> {
-    // First create the plugin in the database
     // Convert empty strings to null for description and author
     const desc = description?.trim() || null;
     const auth = author?.trim() || null;
 
-    return await PluginModel.create({
+    const query = `
+      INSERT INTO plugins (uuid, name, version, description, author, enabled)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+    
+    const values = [
+      uuidv4(),
       name,
       version,
-      description: desc,
-      author: auth,
+      desc,
+      auth,
       enabled
-    });
+    ];
+
+    const result = await db.getPool().query<Plugin>(query, values);
+    return result.rows[0];
   }
 
   /**
    * Get a plugin by ID
    */
   public async getPlugin(id: number): Promise<Plugin | null> {
-    return PluginModel.findById(id);
+    return this.findById(id);
+  }
+
+  /**
+   * Find a plugin by ID
+   */
+  public async findById(id: number): Promise<Plugin | null> {
+    const query = 'SELECT * FROM plugins WHERE id = $1';
+    const result = await db.getPool().query<Plugin>(query, [id]);
+    return result.rows[0] || null;
   }
 
   /**
    * Get a plugin by UUID
    */
   public async getPluginByUuid(uuid: string): Promise<Plugin | null> {
-    return PluginModel.findByUuid(uuid);
+    return this.findByUuid(uuid);
+  }
+
+  /**
+   * Find a plugin by UUID
+   */
+  public async findByUuid(uuid: string): Promise<Plugin | null> {
+    const query = 'SELECT * FROM plugins WHERE uuid = $1';
+    const result = await db.getPool().query<Plugin>(query, [uuid]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Find all plugins
+   */
+  public async findAll(): Promise<Plugin[]> {
+    const query = 'SELECT * FROM plugins ORDER BY created_at DESC';
+    const result = await db.getPool().query<Plugin>(query);
+    return result.rows;
   }
 
   /**
@@ -74,6 +113,9 @@ export class PluginService {
   /**
    * Update a plugin
    */
+  /**
+   * Update a plugin
+   */
   public async updatePlugin(
     id: number,
     updates: {
@@ -92,14 +134,55 @@ export class PluginService {
     if ('author' in updateData && updateData.author === null) {
       updateData.author = undefined;
     }
-    return PluginModel.update(id, updateData);
+    
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    for (const [key, value] of Object.entries(updateData)) {
+      if (value !== undefined) {
+        fields.push(`${key} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    }
+
+    if (fields.length === 0) {
+      return this.findById(id);
+    }
+
+    fields.push('updated_at = NOW()');
+    
+    const query = `
+      UPDATE plugins
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    
+    values.push(id);
+    
+    const result = await db.getPool().query<Plugin>(query, values);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Delete a plugin and its associated files
+   */
+  /**
+   * Delete a plugin by ID
+   */
+  public async delete(id: number): Promise<boolean> {
+    const query = 'DELETE FROM plugins WHERE id = $1';
+    const result = await db.getPool().query(query, [id]);
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   /**
    * Delete a plugin and its associated files
    */
   public async deletePlugin(id: number): Promise<boolean> {
-    const plugin = await PluginModel.findById(id);
+    const plugin = await this.findById(id);
     if (!plugin) return false;
 
     // Delete the plugin files from S3
@@ -107,7 +190,7 @@ export class PluginService {
     await this.s3Service.deleteFolder(prefix);
 
     // Delete the database entry
-    return PluginModel.delete(id);
+    return this.delete(id);
   }
 
   /**
@@ -137,6 +220,11 @@ export class PluginService {
    * @param id Plugin ID
    * @param fileBuffer The file buffer to upload
    */
+  /**
+   * Upload or update a plugin file
+   * @param id Plugin ID
+   * @param fileBuffer The file buffer to upload
+   */
   public async uploadPluginFile(id: number, fileBuffer: Buffer): Promise<void> {
     const plugin = await this.getPlugin(id);
     if (!plugin) {
@@ -148,6 +236,6 @@ export class PluginService {
     await this.s3Service.uploadFile(key, fileBuffer, 'application/zip');
 
     // Update the plugin's updated_at timestamp
-    await PluginModel.update(id, {});
+    await this.updatePlugin(id, {});
   }
 }
