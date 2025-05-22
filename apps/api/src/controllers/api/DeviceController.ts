@@ -205,7 +205,6 @@ export class DeviceController implements IController {
     try {
       // Extract and validate device properties from headers
       const fwVersion = (req.headers['fw_version'] as string) ?? '';
-      const host = (req.headers['host'] as string) || (req.headers['x-forwarded-for'] as string) || '';
 
       // Parse numeric values with proper validation
       const parseNumber = (value: string | undefined, defaultValue: number): number => {

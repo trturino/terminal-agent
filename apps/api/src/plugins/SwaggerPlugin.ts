@@ -32,7 +32,7 @@ export class SwaggerPlugin {
           securitySchemes: {
             apiKey: {
               type: 'apiKey',
-              name: 'access-token',
+              name: 'Access-Token',
               in: 'header',
               description: 'Access token for API authentication',
             },

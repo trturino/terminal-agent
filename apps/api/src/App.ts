@@ -17,6 +17,7 @@ import { MultipartPlugin } from './plugins/MultipartPlugin.js';
 import { runMigrations } from './utils/Migrate.js';
 import { db } from './config/Database.js';
 import { PluginController } from './controllers/internal/PluginController.js';
+import { DeviceController as InternalDeviceController } from './controllers/internal/DeviceController.js';
 import multipart, { ajvFilePlugin } from '@fastify/multipart';
 
 export class App {
@@ -115,8 +116,8 @@ export class App {
         
         // Initialize controllers with their dependencies
         const deviceController = new DeviceController(deviceService, fileService);
-
         const pluginController = new PluginController(pluginService);
+        const internalDeviceController = new InternalDeviceController(deviceService);
         
         // Initialize controllers
         const healthController = new HealthController();
@@ -124,6 +125,7 @@ export class App {
         // Register routes
         deviceController.registerRoutes(this.server);
         pluginController.registerRoutes(this.server);
+        internalDeviceController.registerRoutes(this.server);
         healthController.registerRoutes(this.server);
     }
 

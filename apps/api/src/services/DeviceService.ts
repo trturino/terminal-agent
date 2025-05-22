@@ -181,7 +181,49 @@ export class DeviceService implements IDeviceService {
     return this.findById(id);
   }
 
-  private mapToDevice(data: DeviceData): Device {
+  async listDevices(skip: number = 0, limit: number = 10): Promise<{ data: Device[], total: number }> {
+    // Get total count
+    const countResult = await db.getPool().query<{ count: string }>('SELECT COUNT(*) FROM devices');
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    // Get paginated results
+    const result = await db.getPool().query<DeviceData>(
+      'SELECT * FROM devices ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, skip]
+    );
+
+    return {
+      data: result.rows.map(row => this.mapToDevice(row)),
+      total
+    };
+  }
+
+  async updateDevice(id: string, updateData: Partial<Omit<DeviceData, 'id' | 'device_id' | 'created_at' | 'updated_at' | 'last_seen_at'>>): Promise<Device | null> {
+    const device = await this.findById(id);
+    if (!device) {
+      return null;
+    }
+
+    // Update only the provided fields
+    const updatedDevice = {
+      ...device,
+      ...updateData,
+      updated_at: new Date()
+    };
+
+    const result = await this.createOrUpdate(updatedDevice);
+    return result;
+  }
+
+  async deleteDevice(id: string): Promise<boolean> {
+    const result = await db.getPool().query(
+      'DELETE FROM devices WHERE id = $1 RETURNING *',
+      [id]
+    );
+    return (result.rowCount || 0) > 0;
+  }
+
+  public mapToDevice(data: DeviceData): Device {
     const device = new Device(data);
     device.created_at = data.created_at;
     device.updated_at = data.updated_at;

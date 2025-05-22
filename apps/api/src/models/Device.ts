@@ -14,7 +14,7 @@ export interface DeviceData extends Timestamped {
   filename?: string;
 }
 
-export class Device implements DeviceData, JsonSerializable<DeviceData> {
+export class Device implements DeviceData {
   device_id?: number;  // Auto-incrementing primary key
   id: string;          // External device identifier (kept as unique)
   access_token: string;
@@ -46,14 +46,13 @@ export class Device implements DeviceData, JsonSerializable<DeviceData> {
     this.filename = data.filename;
   }
 
-  // Helper method to convert to plain object
-  toJSON(): DeviceData {
+  // Convert to plain object
+  toJSON() {
     return {
       device_id: this.device_id,
       id: this.id,
       access_token: this.access_token,
       firmware_version: this.firmware_version,
-
       width: this.width,
       height: this.height,
       refresh_rate: this.refresh_rate,

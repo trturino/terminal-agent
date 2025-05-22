@@ -28,6 +28,7 @@ export class PluginController implements IController {
     app.post('/internal/plugins', {
       schema: {
         description: 'Create a new plugin',
+        tags: ['Plugin', 'Internal'],
         body: {
           type: 'object',
           required: ['name', 'version'],
@@ -61,6 +62,7 @@ export class PluginController implements IController {
     app.post('/internal/plugins/:id/upload', {
       schema: {
         description: 'Upload or update plugin file',
+        tags: ['Plugin', 'Internal'],
         consumes: ['multipart/form-data'],
         params: {
           type: 'object',
@@ -84,6 +86,7 @@ export class PluginController implements IController {
     app.get('/internal/plugins', {
       schema: {
         description: 'List plugins with pagination',
+        tags: ['Plugin', 'Internal'],
         querystring: {
           type: 'object',
           properties: {
@@ -139,6 +142,7 @@ export class PluginController implements IController {
     app.get('/internal/plugins/:id', {
       schema: {
         description: 'Get a plugin by ID',
+        tags: ['Plugin', 'Internal'],
         params: {
           type: 'object',
           required: ['id'],
@@ -168,6 +172,7 @@ export class PluginController implements IController {
     app.patch('/internal/plugins/:id', {
       schema: {
         description: 'Update a plugin',
+        tags: ['Plugin', 'Internal'],
         params: {
           type: 'object',
           required: ['id'],
@@ -208,6 +213,7 @@ export class PluginController implements IController {
     app.delete('/internal/plugins/:id', {
       schema: {
         description: 'Delete a plugin',
+        tags: ['Plugin', 'Internal'],
         params: {
           type: 'object',
           required: ['id'],
@@ -229,6 +235,7 @@ export class PluginController implements IController {
     app.get('/internal/plugins/:id/download-url', {
       schema: {
         description: 'Get a download URL for a plugin',
+        tags: ['Plugin', 'Internal'],
         params: {
           type: 'object',
           required: ['id'],
