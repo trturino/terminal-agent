@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { HealthController } from '../../../src/controllers/HealthController';
+import { HealthController } from '../../../src/controllers/api/HealthController';
 import { createTestServer } from '../../utils/testUtils';
 
 describe('HealthController', () => {

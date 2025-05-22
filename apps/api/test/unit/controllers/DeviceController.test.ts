@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { DeviceController } from '../../../src/controllers/DeviceController';
+import { DeviceController } from '../../../src/controllers/api/DeviceController';
 import { DeviceService } from '../../../src/services/DeviceService';
 import { createTestServer, resetMocks } from '../../utils/testUtils';
 import { Device } from '../../../src/models/Device';

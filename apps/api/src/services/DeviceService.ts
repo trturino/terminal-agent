@@ -57,9 +57,8 @@ export class DeviceService implements IDeviceService {
       device_id,
       id,
       access_token,
+      friendly_id,
       firmware_version,
-      host,
-      user_agent,
       width,
       height,
       refresh_rate,
@@ -73,34 +72,42 @@ export class DeviceService implements IDeviceService {
       const result = await db.getPool().query<DeviceData>(
         `UPDATE devices SET
           access_token = $2,
-          firmware_version = $3,
-          host = $4,
-          user_agent = $5,
-          width = $6,
-          height = $7,
-          refresh_rate = $8,
-          battery_voltage = $9,
-          rssi = $10,
-          filename = $11,
+          friendly_id = $3,
+          firmware_version = $4,
+          width = $5,
+          height = $6,
+          refresh_rate = $7,
+          battery_voltage = $8,
+          rssi = $9,
+          filename = $10,
           updated_at = CURRENT_TIMESTAMP
         WHERE device_id = $1
         RETURNING *`,
-        [device_id, access_token, firmware_version, host, user_agent,
-          width, height, refresh_rate, battery_voltage, rssi, filename]
+        [
+          device_id,
+          access_token,
+          friendly_id,
+          firmware_version,
+          width,
+          height,
+          refresh_rate,
+          battery_voltage,
+          rssi,
+          filename
+        ]
       );
       return this.mapToDevice(result.rows[0]);
     } else {
-      // This is an insert
+      // Otherwise, this is an insert or upsert
       const result = await db.getPool().query<DeviceData>(
         `INSERT INTO devices (
-          id, access_token, firmware_version, host, user_agent,
+          id, access_token, friendly_id, firmware_version,
           width, height, refresh_rate, battery_voltage, rssi, filename
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (id) DO UPDATE SET
           access_token = EXCLUDED.access_token,
+          friendly_id = COALESCE(EXCLUDED.friendly_id, devices.friendly_id),
           firmware_version = COALESCE(EXCLUDED.firmware_version, devices.firmware_version),
-          host = COALESCE(EXCLUDED.host, devices.host),
-          user_agent = COALESCE(EXCLUDED.user_agent, devices.user_agent),
           width = COALESCE(EXCLUDED.width, devices.width),
           height = COALESCE(EXCLUDED.height, devices.height),
           refresh_rate = COALESCE(EXCLUDED.refresh_rate, devices.refresh_rate),
@@ -109,8 +116,18 @@ export class DeviceService implements IDeviceService {
           filename = COALESCE(EXCLUDED.filename, devices.filename),
           updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
-        [id, access_token, firmware_version, host, user_agent,
-          width, height, refresh_rate, battery_voltage, rssi, filename]
+        [
+          id,
+          access_token,
+          friendly_id,
+          firmware_version,
+          width,
+          height,
+          refresh_rate,
+          battery_voltage,
+          rssi,
+          filename
+        ]
       );
       return this.mapToDevice(result.rows[0]);
     }
@@ -121,12 +138,42 @@ export class DeviceService implements IDeviceService {
   async registerDevice(
     id: string,
     accessToken: string,
-    firmwareVersion?: string
+    options: {
+      firmwareVersion?: string;
+      friendlyId?: string;
+      width?: number;
+      height?: number;
+      refreshRate?: number;
+      batteryVoltage?: number;
+      rssi?: number;
+      filename?: string;
+    } = {}
   ): Promise<Device> {
+    const {
+      firmwareVersion = '',
+      friendlyId,
+      width = 0,
+      height = 0,
+      refreshRate = 0,
+      batteryVoltage = 0,
+      rssi = 0,
+      filename = 'empty_state'
+    } = options;
+    // Generate a friendly ID if not provided
+    const generatedFriendlyId = friendlyId || Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Create or update the device with initial values
     return this.createOrUpdate({
       id,
       access_token: accessToken,
+      friendly_id: generatedFriendlyId,
       firmware_version: firmwareVersion,
+      width,
+      height,
+      refresh_rate: refreshRate,
+      battery_voltage: batteryVoltage,
+      rssi,
+      filename
     });
   }
 

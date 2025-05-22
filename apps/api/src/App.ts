@@ -1,8 +1,8 @@
 import Fastify, { fastify, FastifyInstance } from 'fastify';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Config } from './config/Config.js';
-import { HealthController } from './controllers/HealthController.js';
-import { DeviceController } from './controllers/DeviceController.js';
+import { HealthController } from './controllers/api/HealthController.js';
+import { DeviceController } from './controllers/api/DeviceController.js';
 import { DeviceService } from './services/DeviceService.js';
 import { FileService } from './services/FileService.js';
 import { SensiblePlugin } from './plugins/SensiblePlugin.js';

@@ -7,7 +7,16 @@ export interface IDeviceService {
   registerDevice(
     id: string,
     accessToken: string,
-    firmwareVersion?: string
+    options?: {
+      firmwareVersion?: string;
+      friendlyId?: string;
+      width?: number;
+      height?: number;
+      refreshRate?: number;
+      batteryVoltage?: number;
+      rssi?: number;
+      filename?: string;
+    }
   ): Promise<Device>;
   getDevice(id: string): Promise<Device | null>;
 }
