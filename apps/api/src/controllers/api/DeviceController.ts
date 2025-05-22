@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { IDeviceService } from '../../interfaces/IDeviceService';
 import { IFileService } from '../../interfaces/IFileService';
 import { v4 as uuidv4 } from 'uuid';
+import { IController } from '../IController';
 
 interface DisplayResponse {
   status: number;
@@ -24,7 +25,7 @@ interface DisplayRequestHeaders {
   'Height': string | null;
 }
 
-export class DeviceController {
+export class DeviceController implements IController {
   private deviceService: IDeviceService;
   private fileService: IFileService;
 

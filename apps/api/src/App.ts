@@ -5,14 +5,19 @@ import { HealthController } from './controllers/api/HealthController.js';
 import { DeviceController } from './controllers/api/DeviceController.js';
 import { DeviceService } from './services/DeviceService.js';
 import { FileService } from './services/FileService.js';
+import { S3Service } from './services/S3Service.js';
+import { PluginService } from './services/PluginService.js';
 import { SensiblePlugin } from './plugins/SensiblePlugin.js';
 import { HelmetPlugin } from './plugins/HelmetPlugin.js';
 import { CompressPlugin } from './plugins/CompressPlugin.js';
 import { CorsPlugin } from './plugins/CorsPlugin.js';
 import { RateLimitPlugin } from './plugins/RateLimitPlugin.js';
 import { SwaggerPlugin } from './plugins/SwaggerPlugin.js';
+import { MultipartPlugin } from './plugins/MultipartPlugin.js';
 import { runMigrations } from './utils/Migrate.js';
 import { db } from './config/Database.js';
+import { PluginController } from './controllers/internal/PluginController.js';
+import multipart, { ajvFilePlugin } from '@fastify/multipart';
 
 export class App {
     private readonly server: FastifyInstance;
@@ -40,6 +45,11 @@ export class App {
                         remotePort: req.socket?.remotePort,
                     })
                 },
+                
+            },
+            ajv: {
+                // register the multipart plugin so `isFile` is understood
+                plugins: [ajvFilePlugin]
             },
             disableRequestLogging: false,
             requestIdHeader: 'x-request-id',
@@ -59,10 +69,11 @@ export class App {
         await this.server.register(CompressPlugin.plugin);
         await this.server.register(RateLimitPlugin.plugin);
         await this.server.register(SwaggerPlugin.plugin);
+        await this.server.register(MultipartPlugin.plugin);
     }
 
     private registerControllers(): void {
-        // Initialize services with dependency injection
+        // Initialize S3 client for main application
         const s3Config: any = {
             region: this.config.s3.region,
             endpoint: this.config.s3.endpoint,
@@ -78,18 +89,41 @@ export class App {
         }
 
         const s3Client = new S3Client(s3Config);
-
-        const fileService = new FileService(s3Client, this.config.s3.bucketName);
+        const imagesS3Service = new S3Service(s3Client, this.config.s3.imagesBucketName);
+        const fileService = new FileService(imagesS3Service);
         const deviceService = new DeviceService(fileService);
+        
+        // Initialize S3 client for plugins
+        const pluginS3Config: any = {
+          region: this.config.s3.region,
+          endpoint: this.config.s3.endpoint,
+          forcePathStyle: true,
+        };
+        
+        if ('accessKeyId' in this.config.s3 && 'secretAccessKey' in this.config.s3) {
+          pluginS3Config.credentials = {
+            accessKeyId: (this.config.s3 as any).accessKeyId,
+            secretAccessKey: (this.config.s3 as any).secretAccessKey,
+          };
+        }
+        
+        const pluginS3Service = new S3Service(pluginS3Config, this.config.s3.pluginsBucketName);
+
+        
+        // Initialize PluginService with the S3 service
+        const pluginService = new PluginService(pluginS3Service);
         
         // Initialize controllers with their dependencies
         const deviceController = new DeviceController(deviceService, fileService);
+
+        const pluginController = new PluginController(pluginService);
         
         // Initialize controllers
         const healthController = new HealthController();
         
         // Register routes
         deviceController.registerRoutes(this.server);
+        pluginController.registerRoutes(this.server);
         healthController.registerRoutes(this.server);
     }
 

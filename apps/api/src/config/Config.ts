@@ -2,7 +2,8 @@ import 'dotenv/config';
 
 export interface S3Config {
   region: string;
-  bucketName: string;
+  imagesBucketName: string;
+  pluginsBucketName: string;
   endpoint?: string;
   forcePathStyle?: boolean;
 }
@@ -29,7 +30,8 @@ export class Config {
   private getS3Config(): S3Config {
     const config: S3Config = {
       region: process.env.S3_REGION || 'us-east-1',
-      bucketName: process.env.S3_BUCKET_NAME || 'terminal-agent',
+      imagesBucketName: process.env.S3_BUCKET_NAME || 'terminal-agent-images',
+      pluginsBucketName: process.env.S3_PLUGINS_BUCKET_NAME || 'terminal-agent-plugins',
     };
 
     // For local development or custom endpoints
@@ -39,8 +41,8 @@ export class Config {
     }
 
     // Validate required S3 config
-    if (!config.bucketName) {
-      throw new Error('S3 bucket name is not configured. Set S3_BUCKET_NAME environment variable.');
+    if (!config.imagesBucketName) {
+      throw new Error('S3 images bucket name is not configured. Set S3_BUCKET_NAME environment variable.');
     }
 
     return config;

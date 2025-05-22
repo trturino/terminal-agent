@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { IController } from '../IController';
 
-export class HealthController {
+export class HealthController implements IController {
   public registerRoutes(app: FastifyInstance): void {
     app.get('/health', this.healthCheck.bind(this));
   }
