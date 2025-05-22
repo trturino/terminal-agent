@@ -1,5 +1,5 @@
 import { Plugin } from "../models/Plugin";
-import { S3Service } from "./S3Service";
+import { S3Service } from "@terminal-agent/shared";
 import { v4 as uuidv4 } from 'uuid';
 import { db, QueryResult } from '../config/Database';
 

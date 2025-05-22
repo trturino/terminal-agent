@@ -1,7 +1,7 @@
 import { db } from '../config/Database';
 import { Device, DeviceData } from '../models/Device';
 import { IDeviceService } from '../interfaces/IDeviceService';
-import { IFileService } from '../interfaces/IFileService';
+import { IFileService } from '@terminal-agent/shared';
 
 export class DeviceService implements IDeviceService {
   private fileService: IFileService;

@@ -1,6 +1,6 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { FileService } from '../../../src/services/FileService';
+import { FileService } from '@terminal-agent/shared';
 
 // Mock the AWS SDK
 const mockSend = jest.fn();

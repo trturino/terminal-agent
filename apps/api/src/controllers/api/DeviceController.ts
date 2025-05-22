@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { IDeviceService } from '../../interfaces/IDeviceService';
-import { IFileService } from '../../interfaces/IFileService';
+import { IFileService } from '@terminal-agent/shared';
 import { v4 as uuidv4 } from 'uuid';
 import { IController } from '../IController';
 

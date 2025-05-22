@@ -14,5 +14,3 @@ export interface Plugin extends Timestamped {
 
 // This is now just a type alias for backward compatibility
 export type PluginModel = Plugin;
-
-// This function is now moved to PluginService

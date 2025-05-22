@@ -1,11 +1,8 @@
 import Fastify, { fastify, FastifyInstance } from 'fastify';
-import { S3Client } from '@aws-sdk/client-s3';
 import { Config } from './config/Config.js';
 import { HealthController } from './controllers/api/HealthController.js';
 import { DeviceController } from './controllers/api/DeviceController.js';
 import { DeviceService } from './services/DeviceService.js';
-import { FileService } from './services/FileService.js';
-import { S3Service } from './services/S3Service.js';
 import { PluginService } from './services/PluginService.js';
 import { SensiblePlugin } from './plugins/SensiblePlugin.js';
 import { HelmetPlugin } from './plugins/HelmetPlugin.js';
@@ -19,6 +16,9 @@ import { db } from './config/Database.js';
 import { PluginController } from './controllers/internal/PluginController.js';
 import { DeviceController as InternalDeviceController } from './controllers/internal/DeviceController.js';
 import multipart, { ajvFilePlugin } from '@fastify/multipart';
+import { S3Client } from '@aws-sdk/client-s3';
+import { FileService } from '@terminal-agent/shared';
+import { S3Service } from '@terminal-agent/shared';
 
 export class App {
     private readonly server: FastifyInstance;

@@ -1,11 +1,10 @@
-import { S3Client } from "@aws-sdk/client-s3";
 import { IFileService } from "../interfaces/IFileService";
-import { S3Service } from "./S3Service";
+import { IS3Service } from "../interfaces/IS3Service";
 
 export class FileService implements IFileService {
-  private s3Service: S3Service;
+  private s3Service: IS3Service;
 
-  constructor(s3Service: S3Service) {
+  constructor(s3Service: IS3Service) {
     this.s3Service = s3Service;
   }
 
