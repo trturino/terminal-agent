@@ -6,10 +6,19 @@ export interface RedisConfig {
   queueName: string;
 }
 
+export interface BrowserPoolConfig {
+  poolSize: number;
+  maxContexts: number;
+  chromiumArgs: string[];
+  statsInterval: number;
+  shutdownTimeout: number;
+}
+
 export interface WorkerConfig {
   env: string;
   logLevel: string;
   redis: RedisConfig;
+  browserPool: BrowserPoolConfig;
 }
 
 export class Config {
@@ -42,6 +51,23 @@ export class Config {
         db: parseInt(process.env.REDIS_DB || '0'),
         queueName: process.env.REDIS_QUEUE_NAME || 'terminal-agent-queue',
       },
+      browserPool: {
+        poolSize: parseInt(process.env.POOL_SIZE || '6', 10),
+        maxContexts: parseInt(process.env.MAX_CONTEXTS || '500', 10),
+        chromiumArgs: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu',
+          ...(process.env.PLAYWRIGHT_CHROMIUM_ARGS?.split(' ') || [])
+        ],
+        statsInterval: 30000, // 30 seconds
+        shutdownTimeout: 30000 // 30 seconds
+      }
     };
   }
 }
