@@ -1,8 +1,8 @@
 import { Config } from '../config/config';
-import { createLogger } from '../utils/logger';
+import { logger } from '../utils/logger';
 import { MessageQueue } from './queue';
 
-const logger = createLogger('worker');
+const loggerWithContext = logger.child({ module: 'worker' });
 
 export class Worker {
   private isRunning: boolean = false;
@@ -19,31 +19,28 @@ export class Worker {
 
   async start(): Promise<void> {
     if (this.isRunning) {
-      logger.warn('Worker is already running');
+      loggerWithContext.warn('Worker is already running');
       return;
     }
 
     this.isRunning = true;
-    logger.info('Starting worker', {
-      queueName: this.config.queueName
-    });
-
-    logger.info('Worker started and listening for jobs');
+    loggerWithContext.info({ queueName: this.config.queueName }, 'Starting worker');
+    loggerWithContext.info('Worker started and listening for jobs');
   }
 
   async stop(): Promise<void> {
     if (!this.isRunning) {
-      logger.warn('Worker is not running');
+      loggerWithContext.warn('Worker is not running');
       return;
     }
 
-    logger.info('Stopping worker...');
+    loggerWithContext.info('Stopping worker...');
     this.isRunning = false;
 
     // Close the queue and its connections
     await this.queue.close();
 
-    logger.info('Worker stopped');
+    loggerWithContext.info('Worker stopped');
   }
 
   /**
@@ -58,7 +55,7 @@ export class Worker {
    */
   private async processJob(job: any): Promise<void> {
     const { id, data } = job;
-    logger.info('Processing job', { jobId: id, data });
+    loggerWithContext.info({ jobId: job.id, data: job.data }, 'Processing job');
     
     try {
       // Convert data to message format if needed
@@ -67,9 +64,17 @@ export class Worker {
       // Process the message
       await this.processMessage(id, message);
       
-      logger.info('Job completed successfully', { jobId: id });
+      loggerWithContext.info({ jobId: job.id }, 'Job completed successfully');
     } catch (error) {
-      logger.error('Error processing job', { jobId: id, error });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      loggerWithContext.error(
+        { 
+          jobId: job.id,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        'Error processing job'
+      );
       throw error; // Let BullMQ handle retries
     }
   }
@@ -79,7 +84,7 @@ export class Worker {
    */
   private async processMessage(id: string, message: any): Promise<void> {
     // Process the message
-    logger.info('Processing message', { id, message });
+    loggerWithContext.info({ id, message }, 'Processing message');
     
     // Add your message processing logic here
     // For example:
@@ -88,7 +93,7 @@ export class Worker {
     // Simulate some work
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    logger.info('Message processed successfully', { id });
+    loggerWithContext.info({ id }, 'Message processed successfully');
   }
 
   /**

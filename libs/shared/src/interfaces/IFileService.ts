@@ -1,3 +1,5 @@
+import { S3Client } from '@aws-sdk/client-s3';
+
 export interface IFileService {
   getPresignedUrl(deviceId: string, filename: string, expiresIn?: number): Promise<string>;
   deleteFile(deviceId: string, filename: string): Promise<void>;

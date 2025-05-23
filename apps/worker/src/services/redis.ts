@@ -1,8 +1,8 @@
 import Redis, { Redis as RedisClientType, RedisOptions } from 'ioredis';
 import { Config } from '../config/config';
-import { createLogger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
-const logger = createLogger('redis');
+const loggerWithContext = logger.child({ module: 'redis' });
 
 export class RedisClient {
   private client: RedisClientType;
@@ -26,17 +26,27 @@ export class RedisClient {
 
   private setupEventListeners(): void {
     this.client.on('connect', () => {
+      loggerWithContext.info('Redis client connected');
       this.isConnected = true;
-      logger.info('Connected to Redis');
     });
 
     this.client.on('error', (error) => {
-      logger.error('Redis error:', error);
+      loggerWithContext.error({ error: error.message }, 'Redis client error');
+      this.isConnected = false;
     });
 
-    this.client.on('end', () => {
+    this.client.on('close', () => {
+      loggerWithContext.warn('Redis client connection closed');
       this.isConnected = false;
-      logger.info('Disconnected from Redis');
+    });
+
+    this.client.on('reconnecting', () => {
+      loggerWithContext.info('Redis client reconnecting...');
+    });
+
+    this.client.on('ready', () => {
+      loggerWithContext.info('Redis client ready');
+      this.isConnected = true;
     });
   }
 

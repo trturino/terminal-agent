@@ -1,9 +1,9 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { Redis } from 'ioredis';
 import { Config } from '../config/config';
-import { createLogger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
-const logger = createLogger('queue');
+const loggerWithContext = logger.child({ module: 'queue' });
 
 export class MessageQueue {
   private queue: Queue;
@@ -40,7 +40,7 @@ export class MessageQueue {
     this.worker = new Worker(
       queueName,
       async (job: Job) => {
-        logger.info(`Processing job ${job.id}`);
+        loggerWithContext.info({ jobId: job.id }, 'Processing job');
         await this.processFn(job);
       },
       {
@@ -54,20 +54,37 @@ export class MessageQueue {
 
   private setupEventListeners(): void {
     this.worker.on('completed', (job) => {
-      logger.info(`Job ${job.id} completed`);
+      loggerWithContext.info({ jobId: job.id }, 'Job completed successfully');
     });
 
     this.worker.on('failed', (job, error) => {
-      logger.error(`Job ${job?.id} failed:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      loggerWithContext.error(
+        { 
+          jobId: job?.id, 
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        'Job failed'
+      );
     });
 
     this.worker.on('error', (error) => {
-      logger.error('Worker error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      loggerWithContext.error(
+        { 
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        'Worker error'
+      );
     });
   }
 
   async addJob(data: any, options = {}) {
-    return this.queue.add('process', data, options);
+    const job = await this.queue.add('process', data, options);
+    loggerWithContext.info({ jobId: job.id, queue: this.queueName }, 'Job added to queue');
+    return job;
   }
 
   async close(): Promise<void> {

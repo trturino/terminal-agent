@@ -1,30 +1,33 @@
 import 'dotenv/config';
 import { Worker } from './services/worker';
-import { createLogger } from './utils/logger';
+import { logger } from './utils/logger';
 
-const logger = createLogger('worker:main');
+const loggerWithContext = logger.child({ module: 'worker:main' });
 
 async function start() {
   try {
-    logger.info('Starting worker service...');
+    loggerWithContext.info('Starting worker service...');
     
     // Initialize worker
     const worker = new Worker();
 
     // Handle shutdown gracefully
     const shutdown = async (signal: string) => {
-      logger.info(`Received ${signal}, shutting down gracefully...`);
+      loggerWithContext.info(`Received ${signal}, shutting down gracefully...`);
       
       try {
         await worker.stop();
-        logger.info('Worker shutdown completed');
+        loggerWithContext.info('Worker shutdown completed');
         process.exit(0);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        logger.error('Error during shutdown', { 
-          error: errorMessage,
-          stack: error instanceof Error ? error.stack : undefined,
-        });
+        loggerWithContext.error(
+          { 
+            error: errorMessage,
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+          'Error during shutdown'
+        );
         process.exit(1);
       }
     };
@@ -37,23 +40,34 @@ async function start() {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      logger.error('Uncaught exception', {
-        error: error.message,
-        stack: error.stack,
-      });
+      loggerWithContext.error(
+        { 
+          error: error.message,
+          stack: error.stack,
+        },
+        'Uncaught exception'
+      );
       // Don't exit immediately, let the process complete current operations
     });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled rejection at:', promise, 'reason:', reason);
+      const reasonMessage = reason instanceof Error ? reason.message : String(reason);
+      loggerWithContext.error(
+        { 
+          reason: reasonMessage,
+          stack: reason instanceof Error ? reason.stack : undefined,
+          promise: String(promise)
+        },
+        'Unhandled rejection'
+      );
       // Don't exit immediately, let the process complete current operations
     });
 
-    // Start processing messages
+    // Start the worker
     await worker.start();
-    
-    logger.info('Worker service started successfully', {
+
+    loggerWithContext.info('Worker service started successfully', {
       pid: process.pid,
       nodeVersion: process.version,
       platform: process.platform,
@@ -61,19 +75,26 @@ async function start() {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to start worker service', { 
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    loggerWithContext.error(
+      { 
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      'Failed to start worker service'
+    );
     process.exit(1);
   }
 }
 
 // Start the application
 start().catch(error => {
-  logger.error('Unexpected error in worker service', {
-    error: error instanceof Error ? error.message : 'Unknown error',
-    stack: error instanceof Error ? error.stack : undefined,
-  });
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  loggerWithContext.error(
+    { 
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    },
+    'Unexpected error in worker service'
+  );
   process.exit(1);
 });

@@ -2,8 +2,9 @@ import Fastify, { fastify, FastifyInstance } from 'fastify';
 import { Config } from './config/Config.js';
 import { HealthController } from './controllers/api/HealthController.js';
 import { DeviceController } from './controllers/api/DeviceController.js';
-import { DeviceService } from './services/DeviceService.js';
+import { S3Service, FileService, IPluginFileService, PluginFileService } from '@terminal-agent/shared';
 import { PluginService } from './services/PluginService.js';
+import { DeviceService } from './services/DeviceService.js';
 import { SensiblePlugin } from './plugins/SensiblePlugin.js';
 import { HelmetPlugin } from './plugins/HelmetPlugin.js';
 import { CompressPlugin } from './plugins/CompressPlugin.js';
@@ -17,8 +18,6 @@ import { PluginController } from './controllers/internal/PluginController.js';
 import { DeviceController as InternalDeviceController } from './controllers/internal/DeviceController.js';
 import multipart, { ajvFilePlugin } from '@fastify/multipart';
 import { S3Client } from '@aws-sdk/client-s3';
-import { FileService } from '@terminal-agent/shared';
-import { S3Service } from '@terminal-agent/shared';
 
 export class App {
     private readonly server: FastifyInstance;
@@ -108,11 +107,11 @@ export class App {
           };
         }
         
-        const pluginS3Service = new S3Service(pluginS3Config, this.config.s3.pluginsBucketName);
-
+        const s3Service = new S3Service(pluginS3Config, this.config.s3.pluginsBucketName);
+        const pluginFileService: IPluginFileService = new PluginFileService(s3Service);
         
-        // Initialize PluginService with the S3 service
-        const pluginService = new PluginService(pluginS3Service);
+        // Initialize PluginService with the PluginFileService
+        const pluginService = new PluginService(pluginFileService);
         
         // Initialize controllers with their dependencies
         const deviceController = new DeviceController(deviceService, fileService);

@@ -40,7 +40,6 @@ export class SwaggerPlugin {
         },
       },
       hideUntagged: false,
-      exposeHeadRoutes: true,
       exposeRoute: true,
     });
 

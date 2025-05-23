@@ -1,15 +1,13 @@
 import { Plugin } from "../models/Plugin";
-import { S3Service } from "@terminal-agent/shared";
+import { IPluginFileService } from "@terminal-agent/shared";
 import { v4 as uuidv4 } from 'uuid';
 import { db, QueryResult } from '../config/Database';
 
 export class PluginService {
-  private s3Service: S3Service;
-  private readonly pluginBucket: string;
+  private pluginFileService: IPluginFileService;
 
-  constructor(s3Service: S3Service) {
-    this.s3Service = s3Service;
-    this.pluginBucket = s3Service.getBucketName();
+  constructor(pluginFileService: IPluginFileService) {
+    this.pluginFileService = pluginFileService;
   }
 
   /**
@@ -185,57 +183,42 @@ export class PluginService {
     const plugin = await this.findById(id);
     if (!plugin) return false;
 
-    // Delete the plugin files from S3
-    const prefix = this.getPluginPrefix(plugin.uuid);
-    await this.s3Service.deleteFolder(prefix);
+    // Delete the plugin files using PluginFileService
+    await this.pluginFileService.deletePluginFiles(plugin.uuid);
 
     // Delete the database entry
     return this.delete(id);
   }
 
   /**
-   * Get the download URL for a plugin
+   * Check if a plugin zip exists
    */
-  public async getPluginDownloadUrl(uuid: string, expiresIn: number = 3600): Promise<string> {
-    const key = this.getPluginZipKey(uuid);
-    return this.s3Service.getPresignedUrl(key, expiresIn);
+  public async pluginZipExists(uuid: string): Promise<boolean> {
+    return this.pluginFileService.pluginZipExists(uuid);
   }
 
   /**
-   * Get the S3 key for a plugin's zip file
-   */
-  private getPluginZipKey(uuid: string): string {
-    return `${this.pluginBucket}/${uuid}/plugin.zip`;
-  }
-
-  /**
-   * Get the S3 prefix for all files of a plugin
-   */
-  private getPluginPrefix(uuid: string): string {
-    return `${this.pluginBucket}/${uuid}/`;
-  }
-
-  /**
-   * Upload or update a plugin file
-   * @param id Plugin ID
-   * @param fileBuffer The file buffer to upload
-   */
-  /**
-   * Upload or update a plugin file
-   * @param id Plugin ID
-   * @param fileBuffer The file buffer to upload
+   * Upload a plugin zip file for a specific plugin ID
    */
   public async uploadPluginFile(id: number, fileBuffer: Buffer): Promise<void> {
-    const plugin = await this.getPlugin(id);
+    const plugin = await this.findById(id);
     if (!plugin) {
       throw new Error('Plugin not found');
     }
+    await this.pluginFileService.uploadPluginZip(plugin.uuid, fileBuffer);
+  }
 
-    // Upload the new file
-    const key = this.getPluginZipKey(plugin.uuid);
-    await this.s3Service.uploadFile(key, fileBuffer, 'application/zip');
+  /**
+   * Upload a plugin zip file for a specific UUID
+   */
+  public async uploadPluginZip(uuid: string, fileBuffer: Buffer): Promise<void> {
+    await this.pluginFileService.uploadPluginZip(uuid, fileBuffer);
+  }
 
-    // Update the plugin's updated_at timestamp
-    await this.updatePlugin(id, {});
+  /**
+   * Get a presigned URL for downloading a plugin
+   */
+  public async getPluginDownloadUrl(uuid: string, expiresIn: number = 3600): Promise<string> {
+    return this.pluginFileService.getPluginDownloadUrl(uuid, expiresIn);
   }
 }
