@@ -47,7 +47,7 @@ export class DeviceController implements IController {
     app.post('/internal/devices', {
       schema: {
         description: 'Create a new device',
-        tags: ['Device', 'Internal'],
+        tags: ['Device Internal'],
         body: {
           type: 'object',
           required: ['id', 'access_token'],
@@ -92,7 +92,7 @@ export class DeviceController implements IController {
     app.get('/internal/devices', {
       schema: {
         description: 'List devices with pagination',
-        tags: ['Device', 'Internal'],
+        tags: ['Device Internal'],
         querystring: {
           type: 'object',
           properties: {
@@ -154,7 +154,7 @@ export class DeviceController implements IController {
     app.get('/internal/devices/:id', {
       schema: {
         description: 'Get a device by ID',
-        tags: ['Device', 'Internal'],
+        tags: ['Device Internal'],
         params: {
           type: 'object',
           required: ['id'],
@@ -198,7 +198,7 @@ export class DeviceController implements IController {
     app.patch('/internal/devices/:id', {
       schema: {
         description: 'Update a device',
-        tags: ['Device', 'Internal'],
+        tags: ['Device Internal'],
         params: {
           type: 'object',
           required: ['id'],
@@ -255,7 +255,7 @@ export class DeviceController implements IController {
     app.delete('/internal/devices/:id', {
       schema: {
         description: 'Delete a device',
-        tags: ['Device', 'Internal'],
+        tags: ['Device Internal'],
         params: {
           type: 'object',
           required: ['id'],

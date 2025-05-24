@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.44-focal
+FROM mcr.microsoft.com/playwright:v1.50.0-noble
 
 # Set working directory
 WORKDIR /app
@@ -9,26 +9,29 @@ RUN apt-get update && apt-get install -y \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js and npm
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+# Install Node.js and pnpm
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g npm@latest
+    npm install -g npm@latest && \
+    npm install -g pnpm
 
-# Copy package files
-COPY package*.json ./
+# Copy root package.json and pnpm workspace files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install dependencies
-RUN npm install
+# Copy app and libs directories
+COPY apps/worker ./apps/worker
+COPY libs ./libs
 
-# Copy source code
-COPY . .
+# Set up pnpm workspace and install dependencies
+RUN pnpm install -r --frozen-lockfile
 
 # Build the application
-RUN npm run build
+RUN pnpm run --filter worker build
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Set the command to run the application
+WORKDIR /app/apps/worker
 CMD ["node", "dist/index.js"]

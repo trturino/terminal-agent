@@ -14,10 +14,7 @@ const mockFileService: jest.Mocked<IFileService> = {
     contentType: 'image/bmp',
     lastModified: new Date(),
     etag: 'test-etag',
-  }),
-  getS3Client: jest.fn().mockReturnValue({
-    send: jest.fn(),
-  } as unknown as any),
+  })
 };
 
 // Mock database
@@ -42,9 +39,10 @@ const createTestDeviceService = () => {
 const createMockDevice = (overrides: Partial<Device> = {}): Device => {
   const now = new Date();
   return new Device({
-    id: 'test-device-1',
     device_id: 1,
+    id: 'test-device-1',
     access_token: 'test-access-token',
+    friendly_id: 'Test Device',
     firmware_version: '1.0.0',
     host: 'test-host',
     user_agent: 'test-user-agent',
@@ -54,9 +52,6 @@ const createMockDevice = (overrides: Partial<Device> = {}): Device => {
     battery_voltage: 3.7,
     rssi: -60,
     filename: 'test-file.bmp',
-    metadata: {
-      last_seen: now.toISOString(),
-    },
     created_at: now,
     updated_at: now,
     last_seen_at: now,
@@ -207,8 +202,10 @@ describe('DeviceService', () => {
       const result = await deviceService.registerDevice(
         'test-device-1',
         'new-token',
-        { test: 'value' },
-        '1.1.0'
+        { 
+          firmwareVersion: '1.1.0',
+          friendlyId: 'Test Device'
+        }
       );
 
       // Verify the database query was called with correct parameters
@@ -255,8 +252,10 @@ describe('DeviceService', () => {
       const result = await deviceService.registerDevice(
         'new-device',
         'new-token',
-        { test: 'new' },
-        '1.0.0'
+        { 
+          firmwareVersion: '1.0.0',
+          friendlyId: 'New Test Device'
+        }
       );
 
       // Verify the database query was called with correct parameters
@@ -265,8 +264,8 @@ describe('DeviceService', () => {
         expect.arrayContaining([
           'new-device',
           'new-token',
-          { test: 'new' },
           '1.0.0',
+          'New Test Device',
           expect.any(String), // host
           expect.any(String), // user_agent
           expect.any(Number), // width

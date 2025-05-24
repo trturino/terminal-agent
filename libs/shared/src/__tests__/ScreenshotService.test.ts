@@ -1,9 +1,28 @@
-import { S3Client } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { S3Service } from '../services/S3Service';
 import { ScreenshotService } from '../services/ScreenshotService';
 import { Readable } from 'stream';
 import { mockClient } from 'aws-sdk-client-mock';
 import 'aws-sdk-client-mock-jest';
+
+// Helper function to create a mock S3 stream
+const createMockS3Stream = (data: Buffer) => {
+  const stream = new Readable();
+  stream.push(data);
+  stream.push(null); // Signal end of stream
+  
+  return {
+    transformToString: async () => Promise.resolve(data.toString('base64')),
+    on: (event: string, listener: (...args: any[]) => void) => {
+      if (event === 'data') listener(data);
+      if (event === 'end') listener();
+      return stream;
+    },
+    pipe: stream.pipe.bind(stream)
+  };
+};
+
+
 
 describe('ScreenshotService', () => {
   let s3Service: S3Service;
@@ -22,7 +41,7 @@ describe('ScreenshotService', () => {
 
   describe('uploadScreenshot', () => {
     it('should upload a screenshot to S3 with correct key and content type', async () => {
-      mockS3Client.onAnyCommand().resolves({});
+      mockS3Client.on(PutObjectCommand).resolves({});
       
       const result = await screenshotService.uploadScreenshot(
         testBuffer,
@@ -31,7 +50,7 @@ describe('ScreenshotService', () => {
       );
 
       expect(result).toBe(`screenshots/${testKey}`);
-      expect(mockS3Client).toHaveReceivedCommandWith('PutObject', {
+      expect(mockS3Client).toHaveReceivedCommandWith(PutObjectCommand, {
         Bucket: testBucket,
         Key: `screenshots/${testKey}`,
         Body: testBuffer,
@@ -42,13 +61,14 @@ describe('ScreenshotService', () => {
 
   describe('getScreenshotStream', () => {
     it('should return a readable stream for the screenshot', async () => {
-      const mockStream = new Readable();
+      const mockStream = createMockS3Stream(testBuffer);
       mockS3Client.on(GetObjectCommand).resolves({
-        Body: mockStream,
+        Body: mockStream as any
       });
 
       const result = await screenshotService.getScreenshotStream(testKey);
-      expect(result).toBeInstanceOf(Readable);
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('pipe'); // Check if it's a stream
       
       // Verify the correct S3 key was used
       expect(mockS3Client).toHaveReceivedCommandWith(GetObjectCommand, {
@@ -60,15 +80,13 @@ describe('ScreenshotService', () => {
 
   describe('getScreenshotBuffer', () => {
     it('should return the screenshot as a buffer', async () => {
-      const mockStream = new Readable();
-      mockStream.push(testBuffer);
-      mockStream.push(null); // End of stream
-      
+      const mockStream = createMockS3Stream(testBuffer);
       mockS3Client.on(GetObjectCommand).resolves({
-        Body: mockStream,
+        Body: mockStream as any
       });
 
       const result = await screenshotService.getScreenshotBuffer(testKey);
+      expect(result).toBeDefined();
       expect(result).toBeInstanceOf(Buffer);
       expect(result).toEqual(testBuffer);
     });

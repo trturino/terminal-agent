@@ -1,14 +1,19 @@
 export * from './types/messages';
 export * as schemas from './types/messages';
+export * from './types/screenshot-job';
+export * from './types/queue';
 
 // Services
 export * from './services/FileService';
 export * from './services/S3Service';
 export * from './services/PluginFileService';
 export * from './services/ScreenshotService';
+export * from './services/QueueService';
+export * from './services/logger';
 
 // Interfaces
 export * from './interfaces/IFileService';
 export * from './interfaces/IS3Service';
 export * from './interfaces/IPluginFileService';
 export * from './interfaces/IScreenshotService';
+export * from './interfaces/IQueueService';

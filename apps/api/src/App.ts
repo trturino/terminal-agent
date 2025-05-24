@@ -2,7 +2,7 @@ import Fastify, { fastify, FastifyInstance } from 'fastify';
 import { Config } from './config/Config.js';
 import { HealthController } from './controllers/api/HealthController.js';
 import { DeviceController } from './controllers/api/DeviceController.js';
-import { S3Service, FileService, IPluginFileService, PluginFileService } from '@terminal-agent/shared';
+import { S3Service, FileService, IPluginFileService, PluginFileService, QueueName } from '@terminal-agent/shared';
 import { PluginService } from './services/PluginService.js';
 import { DeviceService } from './services/DeviceService.js';
 import { SensiblePlugin } from './plugins/SensiblePlugin.js';
@@ -16,6 +16,9 @@ import { runMigrations } from './utils/Migrate.js';
 import { db } from './config/Database.js';
 import { PluginController } from './controllers/internal/PluginController.js';
 import { DeviceController as InternalDeviceController } from './controllers/internal/DeviceController.js';
+import { ScreenshotJobController } from './controllers/internal/ScreenshotJobController.js';
+import { ScreenshotJobService } from './services/ScreenshotJobService.js';
+import { QueueService } from '@terminal-agent/shared';
 import multipart, { ajvFilePlugin } from '@fastify/multipart';
 import { S3Client } from '@aws-sdk/client-s3';
 
@@ -118,14 +121,20 @@ export class App {
         const pluginController = new PluginController(pluginService);
         const internalDeviceController = new InternalDeviceController(deviceService);
         
+        // Initialize services
+        const queueService = new QueueService(QueueName.SCREENSHOT_JOBS, this.config.redis);
+        const screenshotJobService = new ScreenshotJobService(queueService);
+        
         // Initialize controllers
         const healthController = new HealthController();
+        const screenshotJobController = new ScreenshotJobController(screenshotJobService, queueService);
         
         // Register routes
         deviceController.registerRoutes(this.server);
         pluginController.registerRoutes(this.server);
         internalDeviceController.registerRoutes(this.server);
         healthController.registerRoutes(this.server);
+        screenshotJobController.registerRoutes(this.server);
     }
 
     private registerErrorHandler(): void {

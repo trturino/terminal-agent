@@ -8,6 +8,18 @@ export interface S3Config {
   forcePathStyle?: boolean;
 }
 
+export interface RedisConfig {
+  host: string;
+  port: number;
+  password?: string;
+  db: number;
+  tls?: {
+    rejectUnauthorized: boolean;
+    requestCert: boolean;
+    agent: boolean;
+  };
+}
+
 export class Config {
   public readonly port = Number(process.env.PORT ?? 3000);
   public readonly host = process.env.HOST ?? '0.0.0.0';
@@ -22,9 +34,11 @@ export class Config {
   public readonly logLevel = process.env.LOG_LEVEL ?? 'info';
   public readonly nodeEnv = process.env.NODE_ENV ?? 'development';
   public readonly s3: S3Config;
+  public readonly redis: RedisConfig;
 
   constructor() {
     this.s3 = this.getS3Config();
+    this.redis = this.getRedisConfig();
   }
 
   private getS3Config(): S3Config {
@@ -43,6 +57,29 @@ export class Config {
     // Validate required S3 config
     if (!config.imagesBucketName) {
       throw new Error('S3 images bucket name is not configured. Set S3_BUCKET_NAME environment variable.');
+    }
+
+    return config;
+  }
+
+  private getRedisConfig(): RedisConfig {
+    const config: RedisConfig = {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      db: parseInt(process.env.REDIS_DB || '0', 10),
+    };
+
+    if (process.env.REDIS_PASSWORD) {
+      config.password = process.env.REDIS_PASSWORD;
+    }
+
+    // Enable TLS in production or when explicitly requested
+    if (process.env.REDIS_TLS === 'true' || this.nodeEnv === 'production') {
+      config.tls = {
+        rejectUnauthorized: false,
+        requestCert: true,
+        agent: false,
+      };
     }
 
     return config;

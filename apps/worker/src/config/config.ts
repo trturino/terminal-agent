@@ -14,11 +14,21 @@ export interface BrowserPoolConfig {
   shutdownTimeout: number;
 }
 
+export interface AwsConfig {
+  region: string;
+  endpoint?: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+  forcePathStyle: boolean;
+}
+
 export interface WorkerConfig {
   env: string;
   logLevel: string;
   redis: RedisConfig;
   browserPool: BrowserPoolConfig;
+  aws: AwsConfig;
 }
 
 export class Config {
@@ -67,6 +77,14 @@ export class Config {
         ],
         statsInterval: 30000, // 30 seconds
         shutdownTimeout: 30000 // 30 seconds
+      },
+      aws: {
+        region: process.env.AWS_REGION || 'us-east-1',
+        endpoint: process.env.AWS_ENDPOINT,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        bucket: process.env.S3_BUCKET || 'terminal-images',
+        forcePathStyle: process.env.AWS_FORCE_PATH_STYLE === 'true' || false
       }
     };
   }

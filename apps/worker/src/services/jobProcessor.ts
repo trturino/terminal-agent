@@ -1,6 +1,6 @@
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
-import { unzip } from 'unzipper';
+import * as unzipper from 'unzipper'; // Using namespace import for types
 import { Liquid } from 'liquidjs';
 import sharp from 'sharp';
 import { Page } from 'playwright';
@@ -93,7 +93,9 @@ export class JobProcessor {
 
   private async extractZip(zipPath: string, targetDir: string): Promise<void> {
     try {
-      await unzip(zipPath, { path: targetDir });
+      // Using type assertion since the types are not properly exported
+      const zip = await unzipper.Open.file(zipPath) as any;
+      await zip.extract({ path: targetDir });
     } catch (error) {
       loggerWithContext.error({ error, zipPath }, 'Error extracting ZIP file');
       throw new Error(`Failed to extract ZIP file: ${error instanceof Error ? error.message : String(error)}`);

@@ -1,5 +1,5 @@
 -- Recreate the table with all required columns
-CREATE TABLE plugins IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS plugins (
     id SERIAL PRIMARY KEY,
     uuid UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,

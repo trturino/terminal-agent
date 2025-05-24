@@ -7,7 +7,8 @@ describe('HealthController', () => {
 
   beforeEach(async () => {
     server = await createTestServer();
-    HealthController.register(server);
+    const healthController = new HealthController();
+    healthController.registerRoutes(server);
   });
 
   afterEach(async () => {

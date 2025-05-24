@@ -16,7 +16,7 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:RELEASE.2023-05-18T00-05-36Z
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -34,33 +34,28 @@ services:
       timeout: 20s
       retries: 3
 
-  worker:
-    build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
+  postgres:
+    image: postgres:15-alpine
     environment:
-      - NODE_ENV=development
-      - QUEUE_REDIS_URL=redis://redis:6379
-      - AWS_REGION=us-east-1
-      - AWS_ENDPOINT=http://minio:9000
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
-      - S3_BUCKET=terminal-images
-      - PLAYWRIGHT_CHROMIUM_ARGS=--disable-dev-shm-usage --disable-software-rasterizer --disable-gpu --no-sandbox
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: terminal_agent
+    ports:
+      - "5432:5432"
     volumes:
-      - ./apps/worker:/app
-      - /app/node_modules
-    depends_on:
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - terminal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   redis_data:
   minio_data:
+  postgres_data:
 
 networks:
   terminal-network:

@@ -40,6 +40,7 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
 describe('FileService', () => {
   let fileService: FileService;
   let mockS3Client: any;
+  let mockS3Service: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -69,8 +70,27 @@ describe('FileService', () => {
       send: mockSend
     };
     
-    // Create a new instance for each test with the mock client
-    fileService = new FileService(mockS3Client, 'test-bucket');
+    // Create a mock IS3Service implementation with all required methods
+    mockS3Service = {
+      getS3Client: jest.fn().mockReturnValue(mockS3Client),
+      getBucketName: jest.fn().mockReturnValue('test-bucket'),
+      getPresignedUrl: jest.fn().mockImplementation((key, expiresIn = 3600) => 
+        Promise.resolve(`https://example.com/presigned-url/${key}`)
+      ),
+      deleteFile: jest.fn().mockResolvedValue(true),
+      uploadFile: jest.fn().mockImplementation((key, body, contentType) => Promise.resolve()),
+      getFileMetadata: jest.fn().mockResolvedValue({
+        size: 1024,
+        contentType: 'image/jpeg',
+        lastModified: new Date(),
+        etag: 'test-etag',
+      }),
+      listFiles: jest.fn().mockResolvedValue([]),
+      deleteFolder: jest.fn().mockResolvedValue(true)
+    };
+    
+    // Create a new instance for each test with the mock service
+    fileService = new FileService(mockS3Service);
   });
 
   describe('constructor', () => {

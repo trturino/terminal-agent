@@ -13,7 +13,11 @@
     "baseUrl": ".",
     "paths": {
       "@terminal-agent/shared": ["./src/index.ts"]
-    }
+    },
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
   },
   "include": [
     "src/**/*.ts",

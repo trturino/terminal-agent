@@ -16,6 +16,7 @@ export class SwaggerPlugin {
 
     // Generate OpenAPI spec
     await fastify.register(swagger, {
+      mode: 'dynamic',
       openapi: {
         info: {
           title: cfg.swagger.title,
@@ -40,7 +41,11 @@ export class SwaggerPlugin {
         },
       },
       hideUntagged: false,
-      exposeRoute: true,
+    });
+    
+    // Add route for OpenAPI JSON
+    fastify.get('/openapi.json', { schema: { hide: true } }, (req, reply) => {
+      reply.send(fastify.swagger());
     });
 
     // Serve Swagger UI

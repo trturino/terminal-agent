@@ -23,9 +23,10 @@ jest.mock('../../../src/services/DeviceService', () => ({
 const createMockDevice = (overrides: Partial<Device> = {}): Device => {
   const now = new Date();
   return new Device({
-    id: 'test-device-1',
     device_id: 1,
+    id: 'test-device-1',
     access_token: 'test-access-token',
+    friendly_id: 'Test Device',
     firmware_version: '1.0.0',
     host: 'test-host',
     user_agent: 'test-user-agent',
@@ -35,13 +36,10 @@ const createMockDevice = (overrides: Partial<Device> = {}): Device => {
     battery_voltage: 3.7,
     rssi: -60,
     filename: 'test-file.bmp',
-    metadata: {
-      last_seen: now.toISOString(),
-    },
     created_at: now,
     updated_at: now,
     last_seen_at: now,
-    ...overrides,
+    ...overrides
   });
 };
 
