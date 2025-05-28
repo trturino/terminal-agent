@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { IScreenshotJobService } from '../../interfaces/IScreenshotJobService';
-import { ScreenshotJob, JobStatus } from '../../models/ScreenshotJob';
-import { IController } from '../IController';
-import { DeviceProfile, ColorScheme, ProcessedScreenshotResult } from '@terminal-agent/shared';
+import { IScreenshotJobService } from '../../interfaces/IScreenshotJobService.js';
+import { ScreenshotJob } from '../../models/ScreenshotJob.js';
+import { IController } from '../IController.js';
+import { DeviceProfile, ColorScheme } from '@terminal-agent/shared';
 import { IQueueService } from '@terminal-agent/shared';
 
 interface CreateScreenshotJobRequest {

@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { IController } from '../IController';
+import { IController } from '../IController.js';
 
 export class HealthController implements IController {
   public registerRoutes(app: FastifyInstance): void {

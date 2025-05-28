@@ -1,4 +1,4 @@
-import { ScreenshotJob, JobStatus } from '../models/ScreenshotJob';
+import { ScreenshotJob, JobStatus } from '../models/ScreenshotJob.js';
 import { ScreenshotJob as SharedScreenshotJob, ProcessedScreenshotResult } from '@terminal-agent/shared';
 
 export interface IScreenshotJobService {

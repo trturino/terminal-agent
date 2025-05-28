@@ -10,7 +10,6 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { Liquid } from 'liquidjs';
 import { Job } from 'bullmq';
 import { BrowserPool } from './browserPool';
-import { BrowserPoolConfig } from '../interfaces/IBrowserPool';
 
 const loggerWithContext = logger.child({ module: 'worker' });
 
@@ -23,17 +22,12 @@ export class Worker {
   private browserPool: BrowserPool;
 
   constructor() {
+    const s3Client = new S3Client({
+      forcePathStyle: this.config.aws.forcePathStyle,
+    });
 
     const s3Service = new S3Service(
-      {
-        region: this.config.aws.region,
-        endpoint: this.config.aws.endpoint,
-        credentials: {
-          accessKeyId: this.config.aws.accessKeyId,
-          secretAccessKey: this.config.aws.secretAccessKey,
-        },
-        forcePathStyle: this.config.aws.forcePathStyle,
-      },
+      s3Client,
       this.config.aws.bucket
     );
 

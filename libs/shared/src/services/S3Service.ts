@@ -1,19 +1,22 @@
-import { S3Client, S3ClientConfig, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { IS3Service } from "../interfaces/IS3Service";
+import logger from "./logger";
 
 export class S3Service implements IS3Service {
   private s3Client: S3Client;
   private bucketName: string;
 
-  constructor(s3ClientConfig: S3ClientConfig, bucketName: string) {
-    this.s3Client = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
-      endpoint: process.env.S3_ENDPOINT,
-      forcePathStyle: true,
-      ...s3ClientConfig
-    });
-
+  constructor(S3Client: S3Client, bucketName: string) {
+    this.s3Client = S3Client;
     this.bucketName = bucketName;
   }
 
@@ -82,7 +85,7 @@ export class S3Service implements IS3Service {
       await this.s3Client.send(command);
       return true;
     } catch (error) {
-      console.error('Error deleting file from S3:', error);
+      logger.error('Error deleting file from S3:', error);
       return false;
     }
   }
@@ -119,7 +122,7 @@ export class S3Service implements IS3Service {
 
       return true;
     } catch (error) {
-      console.error('Error deleting folder from S3:', error);
+      logger.error('Error deleting folder from S3:', error);
       return false;
     }
   }

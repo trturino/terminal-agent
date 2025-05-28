@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { IDeviceService } from '../../interfaces/IDeviceService';
+import { IDeviceService } from '../../interfaces/IDeviceService.js';
 import { IFileService } from '@terminal-agent/shared';
 import { v4 as uuidv4 } from 'uuid';
-import { IController } from '../IController';
+import { IController } from '../IController.js';
 
 interface DisplayResponse {
   status: number;

@@ -49,9 +49,11 @@ export class Config {
     };
 
     // For local development or custom endpoints
-    if (process.env.S3_ENDPOINT) {
-      config.endpoint = process.env.S3_ENDPOINT;
+    if (process.env.AWS_ENDPOINT_URL) {
+      config.endpoint = process.env.AWS_ENDPOINT_URL;
       config.forcePathStyle = true;
+    } else {
+      config.forcePathStyle = false;
     }
 
     // Validate required S3 config

@@ -1,9 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { DeviceController } from '../../../src/controllers/api/DeviceController';
-import { DeviceService } from '../../../src/services/DeviceService';
-import { createTestServer, resetMocks } from '../../utils/testUtils';
-import { Device } from '../../../src/models/Device';
-import { mockFileService } from '../../setupTests';
+import { createTestServer, resetMocks } from '../../utils/testUtils.js';
+import { Device } from '../../../src/models/Device.js';
+import { mockFileService } from '../../setupTests.js';
 
 // Mock the DeviceService
 const mockCreateOrUpdate = jest.fn();

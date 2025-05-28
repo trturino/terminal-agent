@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { DeviceService } from '../../services/DeviceService';
-import { Device } from '../../models/Device';
-import { IController } from '../IController';
+import { DeviceService } from '../../services/DeviceService.js';
+import { Device } from '../../models/Device.js';
+import { IController } from '../IController.js';
 
 interface CreateDeviceRequest {
   id: string;

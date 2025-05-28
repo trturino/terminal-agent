@@ -35,7 +35,7 @@ describe('ScreenshotService', () => {
 
   beforeEach(() => {
     mockS3Client.reset();
-    s3Service = new S3Service({}, testBucket);
+    s3Service = new S3Service(mockS3Client as any, testBucket);
     screenshotService = new ScreenshotService(s3Service);
   });
 

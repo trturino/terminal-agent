@@ -1,4 +1,4 @@
-import { JsonSerializable, Timestamped } from './BaseModel';
+import { JsonSerializable, Timestamped } from './BaseModel.js';
 
 export interface DeviceData extends Timestamped {
   device_id?: number;  // Auto-incrementing primary key

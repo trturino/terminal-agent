@@ -1,6 +1,6 @@
-import { db } from '../config/Database';
-import { ScreenshotJob, JobStatus } from '../models/ScreenshotJob';
-import { IScreenshotJobService } from '../interfaces/IScreenshotJobService';
+import { db } from '../config/Database.js';
+import { ScreenshotJob, JobStatus } from '../models/ScreenshotJob.js';
+import { IScreenshotJobService } from '../interfaces/IScreenshotJobService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { ScreenshotJob as SharedScreenshotJob, ProcessedScreenshotResult, QueueJobData } from '@terminal-agent/shared';
 import { IQueueService } from '@terminal-agent/shared';

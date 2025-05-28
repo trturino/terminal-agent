@@ -1,18 +1,29 @@
 import { FastifyPluginAsync } from 'fastify';
-import fastifyMultipart, { FastifyMultipartOptions } from '@fastify/multipart';
+import fp from 'fastify-plugin';
+import fastifyMultipart from '@fastify/multipart';
 
+// Type for our multipart options
 export class MultipartPlugin {
     // This is what you pass into `server.register(...)`
-    public static plugin: FastifyPluginAsync = async (fastify) => {
-        const options: FastifyMultipartOptions = {
-            attachFieldsToBody: false,
-            // Add any multipart options here if needed
-            // For example:
-            // limits: {
-            //     fileSize: 10 * 1024 * 1024, // 10MB limit
-            //     files: 1,
-            // },
-        };
-        await fastify.register(fastifyMultipart, options);
-    };
+    public static plugin: FastifyPluginAsync = fp(async (fastify) => {
+        // Register the multipart plugin
+        await fastify.register(fastifyMultipart, {
+            attachFieldsToBody: true, // Set to false to use request.file()
+            limits: {
+                fileSize: 50 * 1024 * 1024, // 50MB limit
+                files: 1, // Only allow one file at a time
+                fieldSize: 1 * 1024 * 1024, // 1MB limit for other fields
+                fieldNameSize: 100,
+                fields: 5, // Limit number of other fields
+            },
+            throwFileSizeLimit: true,
+            onFile: (part: any) => {
+                const filename = part.filename;
+                const mimetype = part.mimetype;
+                if (filename) {
+                    fastify.log.info(`Processing file ${filename} with mimetype ${mimetype}`);
+                }
+            }
+        });
+    });
 }

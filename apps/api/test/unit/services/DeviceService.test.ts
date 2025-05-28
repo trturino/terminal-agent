@@ -1,6 +1,6 @@
-import { DeviceService } from '../../../src/services/DeviceService';
+import { DeviceService } from '../../../src/services/DeviceService.js';
 import { IFileService } from '@terminal-agent/shared';
-import { Device } from '../../../src/models/Device';
+import { Device } from '../../../src/models/Device.js';
 // Use type-only import to avoid runtime error
 import type { Pool } from 'pg';
 

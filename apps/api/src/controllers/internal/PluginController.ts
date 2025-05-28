@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import multipart from '@fastify/multipart';
-import { PluginService } from '../../services/PluginService';
-import { Plugin } from '../../models/Plugin';
-import { IController } from '../IController';
+import type { MultipartFile } from '@fastify/multipart';
+import { PluginService } from '../../services/PluginService.js';
+import { Plugin } from '../../models/Plugin.js';
+import { IController } from '../IController.js';
 
 interface CreatePluginRequest {
   name: string;
@@ -10,10 +10,6 @@ interface CreatePluginRequest {
   description?: string;
   author?: string;
   enabled?: boolean;
-}
-
-interface UploadPluginFileRequest {
-  file: any; // This will be handled by fastify-multipart
 }
 
 export class PluginController implements IController {
@@ -68,9 +64,23 @@ export class PluginController implements IController {
           type: 'object',
           required: ['id'],
           properties: {
-            id: { type: 'string', pattern: '^\\d+$' },
-          },
+            id: { type: 'string', pattern: '^\\d+$' }
+          }
         },
+        // body: {
+        //   content: {
+        //     'multipart/form-data': {
+        //       schema: {
+        //         type: 'object',
+        //         required: ['file'],
+        //         properties: {
+        //           // file shows up as a file picker in Swagger-UI
+        //           file: { type: 'string', format: 'binary' }
+        //         }
+        //       }
+        //     }
+        //   }
+        // },
         response: {
           200: {
             type: 'object',
@@ -394,9 +404,6 @@ export class PluginController implements IController {
   }
 
   /**
-   * Get a download URL for a plugin
-   */
-  /**
    * Upload or update plugin file
    */
   private async uploadPluginFile(
@@ -414,15 +421,16 @@ export class PluginController implements IController {
       throw new Error('Request must be multipart/form-data');
     }
 
-    const file = await request.file();
-    if (!file) {
-      reply.status(400);
-      throw new Error('No file uploaded');
-    }
-
-    const fileBuffer = await file.toBuffer();
-
     try {
+      const { file } = request.body as { file: MultipartFile };
+      if (!file) {
+        reply.status(400);
+        throw new Error('No file uploaded');
+      }
+
+      request.log.info(`Received file: ${file.filename} (${file.mimetype})`);
+      const fileBuffer = await file.toBuffer();
+
       const plugin = await this.pluginService.getPlugin(id);
       if (!plugin) {
         reply.status(404);
@@ -432,11 +440,15 @@ export class PluginController implements IController {
       await this.pluginService.uploadPluginFile(id, fileBuffer);
       return { success: true, message: 'Plugin file uploaded successfully' };
     } catch (error: any) {
+      request.log.error({ err: error }, 'Error uploading plugin file');
       reply.status(400);
       throw new Error(`Failed to upload plugin file: ${error.message}`);
     }
   }
 
+  /**
+   * Get a download URL for a plugin
+   */
   private async getPluginDownloadUrl(
     request: FastifyRequest<{
       Params: { id: string },

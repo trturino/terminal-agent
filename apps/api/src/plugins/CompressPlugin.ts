@@ -1,6 +1,7 @@
 // src/plugins/CompressPlugin.ts
 import { FastifyPluginAsync } from 'fastify';
 import compress from '@fastify/compress';
+import { constants as zlibConstants } from 'zlib';
 
 export class CompressPlugin {
   /**
@@ -18,7 +19,7 @@ export class CompressPlugin {
       // for brotli, you can tweak quality if desired
       brotliOptions: {
         // the compression quality from 0 to 11 (default 4)
-        params: { [require('zlib').constants.BROTLI_PARAM_QUALITY]: 4 },
+        params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 4 },
       },
       // inflate responses if they come pre-compressed
       inflateIfDeflated: true,

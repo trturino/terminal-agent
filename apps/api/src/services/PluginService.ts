@@ -1,7 +1,7 @@
-import { Plugin } from "../models/Plugin";
+import { Plugin } from "../models/Plugin.js";
 import { IPluginFileService } from "@terminal-agent/shared";
 import { v4 as uuidv4 } from 'uuid';
-import { db, QueryResult } from '../config/Database';
+import { db, QueryResult } from '../config/Database.js';
 
 export class PluginService {
   private pluginFileService: IPluginFileService;

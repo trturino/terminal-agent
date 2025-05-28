@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
-import path from 'path';
-import { db } from '../config/Database';
+import { db } from '../config/Database.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 export async function runMigrations(): Promise<void> {
   const client = await db.getPool().connect();
@@ -15,7 +16,9 @@ export async function runMigrations(): Promise<void> {
       )
     `);
     // Get all migration files
-    const migrationsDir = path.join(__dirname, '../migrations');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const migrationsDir = join(__dirname, '../migrations');
     const migrationFiles = (await fs.readdir(migrationsDir))
       .filter(file => file.endsWith('.sql'))
       .sort();
@@ -33,7 +36,7 @@ export async function runMigrations(): Promise<void> {
         console.log(`Running migration: ${file}`);
 
         const migrationSQL = await fs.readFile(
-          path.join(migrationsDir, file),
+          join(migrationsDir, file),
           'utf-8'
         );
 

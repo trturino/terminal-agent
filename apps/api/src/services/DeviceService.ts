@@ -1,6 +1,6 @@
-import { db } from '../config/Database';
-import { Device, DeviceData } from '../models/Device';
-import { IDeviceService } from '../interfaces/IDeviceService';
+import { db } from '../config/Database.js';
+import { Device, DeviceData } from '../models/Device.js';
+import { IDeviceService } from '../interfaces/IDeviceService.js';
 import { IFileService } from '@terminal-agent/shared';
 
 export class DeviceService implements IDeviceService {

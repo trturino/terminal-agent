@@ -1,4 +1,4 @@
-import { Timestamped } from "../models/BaseModel";
+import { Timestamped } from "../models/BaseModel.js";
 
 export interface IPlugin extends Timestamped {
   id?: number;

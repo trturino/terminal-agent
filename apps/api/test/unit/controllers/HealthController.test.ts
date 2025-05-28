@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { HealthController } from '../../../src/controllers/api/HealthController';
-import { createTestServer } from '../../utils/testUtils';
+import { HealthController } from '../../../src/controllers/api/HealthController.js';
+import { createTestServer } from '../../utils/testUtils.js';
 
 describe('HealthController', () => {
   let server: FastifyInstance;

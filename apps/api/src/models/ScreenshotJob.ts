@@ -1,4 +1,4 @@
-import { JsonSerializable, Timestamped } from './BaseModel';
+import { JsonSerializable, Timestamped } from './BaseModel.js';
 import { DeviceProfile, ColorScheme, ProcessedScreenshotResult } from '@terminal-agent/shared';
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';

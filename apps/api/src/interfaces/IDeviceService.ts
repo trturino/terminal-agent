@@ -1,4 +1,4 @@
-import { Device, DeviceData } from "../models/Device";
+import { Device, DeviceData } from "../models/Device.js";
 
 export interface IDeviceService {
   findById(id: string | number): Promise<Device | null>;
