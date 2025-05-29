@@ -11,9 +11,8 @@ export interface ColorScheme {
   palette?: string[]; // HEX colors, required when type = "indexed8"
 }
 
-export interface ScreenshotJob {
-  id: string; // UUID job id
-  tmpZipPath: string; // local path to ZIP (mounted by API)
+export interface ScreenshotQueueJob {
+  pluginUuid: string;
   deviceProfile: DeviceProfile;
   colorScheme?: ColorScheme;
 }

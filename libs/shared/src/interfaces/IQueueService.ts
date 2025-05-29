@@ -1,29 +1,19 @@
-import { QueueJobData, QueueJobResult } from '../types/queue';
+import { Job } from 'bullmq';
 
-export interface IQueueService {
+export interface IQueueService<T, R> {
   addJob(
-    data: Omit<QueueJobData, 'jobId'>, 
-    options?: { jobId?: string }
-  ): Promise<{ id: string }>;
-  
-  getJob(jobId: string): Promise<{ 
-    id: string; 
-    state: string; 
-    result?: QueueJobResult;
-    getState(): Promise<string>;
-    getReturnValue(): Promise<QueueJobResult | undefined>;
-  } | null>;
-  
+    id: string,
+    data: T,
+  ): Promise<string>;
+
+  getJob(id: string): Promise<Job<T, R, string> | null>;
+
   close(): Promise<void>;
-  
+
   // Optional methods that might be used by the service
-  getJobCounts?(): Promise<{
-    active: number;
-    completed: number;
-    failed: number;
-    delayed: number;
-    waiting: number;
-  }>;
-  
+  getJobCounts?(): Promise<{ active: number; completed: number; failed: number; delayed: number; waiting: number; }>;
+
   clean?(grace?: number, limit?: number): Promise<void>;
+
+  close(): Promise<void>;
 }

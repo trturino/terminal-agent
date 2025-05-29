@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
-import { IScreenshotService } from '../interfaces/IScreenshotService';
-import { IS3Service } from '../interfaces/IS3Service';
+import { IScreenshotService } from '../interfaces/IScreenshotService.js';
+import { IS3Service } from '../interfaces/IS3Service.js';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 export class ScreenshotService implements IScreenshotService {

@@ -1,6 +1,6 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { logger } from '../utils/logger';
-import { IBrowserPool, BrowserPoolConfig } from '../interfaces/IBrowserPool';
+import { logger } from '../utils/logger.js';
+import { IBrowserPool, BrowserPoolConfig } from '../interfaces/IBrowserPool.js';
 
 const loggerWithContext = logger.child({ module: 'browser-pool' });
 

@@ -1,5 +1,5 @@
-import { IFileService } from "../interfaces/IFileService";
-import { IS3Service } from "../interfaces/IS3Service";
+import { IFileService } from "../interfaces/IFileService.js";
+import { IS3Service } from "../interfaces/IS3Service.js";
 
 export class FileService implements IFileService {
   private s3Service: IS3Service;

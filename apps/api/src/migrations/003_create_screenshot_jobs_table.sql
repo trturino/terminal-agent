@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS screenshot_jobs (
   job_id SERIAL PRIMARY KEY,
   id UUID NOT NULL UNIQUE,
   device_profile JSONB NOT NULL,
-  color_scheme JSONB,
+  color_scheme VARCHAR(20),
   status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
   error_message TEXT,
   result JSONB,

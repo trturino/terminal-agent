@@ -8,8 +8,9 @@ import {
   DeleteObjectsCommand
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { IS3Service } from "../interfaces/IS3Service";
-import logger from "./logger";
+import { IS3Service } from "../interfaces/IS3Service.js";
+import logger from "./logger.js";
+import { Readable } from "stream";
 
 export class S3Service implements IS3Service {
   private s3Client: S3Client;
@@ -62,6 +63,19 @@ export class S3Service implements IS3Service {
     });
 
     return getSignedUrl(this.s3Client, command, { expiresIn });
+  }
+
+  public async downloadFile(key: string): Promise<Readable> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+
+    const response = await this.s3Client.send(command);
+    if (!response.Body) {
+      throw new Error('Failed to download file from S3');
+    }
+    return response.Body as Readable;
   }
 
   public async uploadFile(key: string, body: Buffer, contentType: string): Promise<void> {

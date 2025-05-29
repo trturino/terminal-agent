@@ -1,13 +1,12 @@
-import { IS3Service } from '../interfaces/IS3Service';
-import { IPluginFileService } from '../interfaces/IPluginFileService';
+import { IS3Service } from '../interfaces/IS3Service.js';
+import { IPluginFileService } from '../interfaces/IPluginFileService.js';
+import { Readable } from 'stream';
 
 export class PluginFileService implements IPluginFileService {
   private s3Service: IS3Service;
-  private readonly pluginBucket: string;
 
   constructor(s3Service: IS3Service) {
     this.s3Service = s3Service;
-    this.pluginBucket = s3Service.getBucketName();
   }
 
   /**
@@ -46,6 +45,14 @@ export class PluginFileService implements IPluginFileService {
   public async getPluginDownloadUrl(uuid: string, expiresIn: number = 3600): Promise<string> {
     const key = this.getPluginZipKey(uuid);
     return this.s3Service.getPresignedUrl(key, expiresIn);
+  }
+
+  /**
+   * Download a plugin zip file for a specific UUID
+   */
+  public async downloadPluginZip(uuid: string): Promise<Readable> {
+    const key = this.getPluginZipKey(uuid);
+    return this.s3Service.downloadFile(key);
   }
 
   /**

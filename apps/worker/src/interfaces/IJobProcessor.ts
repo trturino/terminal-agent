@@ -1,6 +1,6 @@
-import { JobPayload, ProcessedJobResult } from '../types/job';
+import { ScreenshotQueueJob, ProcessedScreenshotResult } from "@terminal-agent/shared";
 
 export interface IJobProcessor {
-  processJob(payload: JobPayload): Promise<ProcessedJobResult>;
+  processJob(payload: ScreenshotQueueJob): Promise<ProcessedScreenshotResult>;
   cleanup(): Promise<void>;
 }

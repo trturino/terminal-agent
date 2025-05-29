@@ -2,7 +2,7 @@ import Fastify, { fastify, FastifyInstance } from 'fastify';
 import { Config } from './config/Config.js';
 import { HealthController } from './controllers/api/HealthController.js';
 import { DeviceController } from './controllers/api/DeviceController.js';
-import { S3Service, FileService, IPluginFileService, PluginFileService, QueueName } from '@terminal-agent/shared';
+import { S3Service, FileService, IPluginFileService, PluginFileService, QueueName, ScreenshotQueueJob, ProcessedScreenshotResult } from '@terminal-agent/shared';
 import { PluginService } from './services/PluginService.js';
 import { DeviceService } from './services/DeviceService.js';
 import { SensiblePlugin } from './plugins/SensiblePlugin.js';
@@ -99,12 +99,12 @@ export class App {
         const internalDeviceController = new InternalDeviceController(deviceService);
         
         // Initialize services
-        const queueService = new QueueService(QueueName.SCREENSHOT_JOBS, this.config.redis);
+        const queueService = new QueueService<ScreenshotQueueJob, ProcessedScreenshotResult>(QueueName.SCREENSHOT_JOBS, this.config.redis);
         const screenshotJobService = new ScreenshotJobService(queueService);
         
         // Initialize controllers
         const healthController = new HealthController();
-        const screenshotJobController = new ScreenshotJobController(screenshotJobService, queueService);
+        const screenshotJobController = new ScreenshotJobController(screenshotJobService, deviceService);
         
         // Register routes
         deviceController.registerRoutes(this.server);

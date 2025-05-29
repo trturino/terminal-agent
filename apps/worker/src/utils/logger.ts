@@ -1,5 +1,5 @@
-import pino from 'pino';
-import { Config } from '../config/config';
+import { pino } from 'pino';
+import { Config } from '../config/config.js';
 
 export class Logger {
   public static readonly instance = (() => {

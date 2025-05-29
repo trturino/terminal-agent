@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { Worker } from './services/worker';
-import { logger } from './utils/logger';
+import { Worker } from './services/worker.js';
+import { logger } from './utils/logger.js';
 
 const loggerWithContext = logger.child({ module: 'worker:main' });
 

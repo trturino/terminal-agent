@@ -1,6 +1,6 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { S3Service } from '../services/S3Service';
-import { ScreenshotService } from '../services/ScreenshotService';
+import { S3Service } from '../services/S3Service.js';
+import { ScreenshotService } from '../services/ScreenshotService.js';
 import { Readable } from 'stream';
 import { mockClient } from 'aws-sdk-client-mock';
 import 'aws-sdk-client-mock-jest';

@@ -1,18 +1,18 @@
 import { Queue, Worker, QueueEvents, Processor, Job } from 'bullmq';
-import { QueueName, QueueJobData, QueueJobResult, QueueConfig } from '../types/queue';
-import logger from './logger';
-import { IQueueService } from '../interfaces/IQueueService';
+import { QueueNameType, QueueConfig } from '../types/queue.js';
+import logger from './logger.js';
+import { IQueueService } from '../interfaces/IQueueService.js';
 
-export class QueueService implements IQueueService {
-  protected queue: Queue;
-  protected worker: Worker | null = null;
+export class QueueService<T, R> implements IQueueService<T, R> {
+  protected queue: Queue<Job<T, R>, R>;
+  protected worker: Worker<T, R> | null = null;
   protected queueEvents: QueueEvents;
   protected logger = logger.child({ module: 'QueueService' });
 
   constructor(
-    protected queueName: string,
+    protected queueName: QueueNameType,
     protected config: QueueConfig,
-    protected processor?: Processor<QueueJobData>
+    protected processor?: Processor<T, R>
   ) {
     const connection = {
       host: config.host,
@@ -22,7 +22,7 @@ export class QueueService implements IQueueService {
       tls: config.tls,
     };
 
-    this.queue = new Queue<QueueJobData, QueueJobResult>(queueName, {
+    this.queue = new Queue<Job<T, R>, R>(queueName, {
       connection,
       defaultJobOptions: {
         removeOnComplete: true,
@@ -38,7 +38,7 @@ export class QueueService implements IQueueService {
     this.queueEvents = new QueueEvents(queueName, { connection });
 
     if (processor) {
-      this.worker = new Worker<QueueJobData, QueueJobResult>(
+      this.worker = new Worker<T, R>(
         queueName,
         processor,
         {
@@ -54,11 +54,11 @@ export class QueueService implements IQueueService {
   private setupWorkerHandlers() {
     if (!this.worker) return;
 
-    this.worker.on('completed', (job: Job<QueueJobData, QueueJobResult>, result: QueueJobResult) => {
+    this.worker.on('completed', (job: Job<T, R>, result: R) => {
       this.logger.info({ jobId: job.id, result }, 'Job completed successfully');
     });
 
-    this.worker.on('failed', (job: Job<QueueJobData, QueueJobResult> | undefined, error: Error) => {
+    this.worker.on('failed', (job: Job<T, R> | undefined, error: Error) => {
       this.logger.error(
         { jobId: job?.id, error: error.message, stack: error.stack },
         'Job failed'
@@ -71,33 +71,23 @@ export class QueueService implements IQueueService {
   }
 
   async addJob(
-    data: Omit<QueueJobData, 'jobId'>,
-    options: { jobId?: string } = {}
-  ): Promise<{ id: string }> {
-    const jobId = options.jobId || `job-${Date.now()}`;
+    id: string,
+    data: T,
+  ): Promise<string> {
     const job = await this.queue.add(
-      'process',
-      { ...data, jobId },
-      { jobId }
+      id,
+      data,
+      { jobId: id }
     );
     this.logger.info({ jobId: job.id }, 'Job added to queue');
-    return { id: job.id! };
+    return job.id!;
   }
 
-  async getJob(jobId: string) {
-    const job = await this.queue.getJob(jobId);
+  async getJob(id: string): Promise<Job<T, R> | null> {
+    const job = await this.queue.getJob(id);
     if (!job) return null;
     
-    const state = await job.getState();
-    const result = await job.getReturnValue();
-    
-    return {
-      id: job.id!,
-      state,
-      result,
-      getState: job.getState.bind(job),
-      getReturnValue: job.getReturnValue.bind(job)
-    };
+    return job;
   }
 
   async close() {

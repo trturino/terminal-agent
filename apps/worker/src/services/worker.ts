@@ -1,23 +1,29 @@
-import { Config } from '../config/config';
-import { logger } from '../utils/logger';
-import { MessageQueue } from './queue';
-import { JobProcessor } from './jobProcessor';
-import { JobPayload } from '../types/job';
-import { promises as fs } from 'fs';
-
-import { ScreenshotService, S3Service, QueueName } from '@terminal-agent/shared';
+import { Config } from '../config/config.js';
+import { logger } from '../utils/logger.js';
+import { JobProcessor } from './jobProcessor.js';
+import {
+  ScreenshotService,
+  S3Service,
+  QueueName,
+  PluginFileService,
+  ScreenshotQueueJob,
+  ProcessedScreenshotResult,
+  IQueueService,
+  QueueService
+} from '@terminal-agent/shared';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Liquid } from 'liquidjs';
+import { BrowserPool } from './browserPool.js';
 import { Job } from 'bullmq';
-import { BrowserPool } from './browserPool';
 
 const loggerWithContext = logger.child({ module: 'worker' });
 
 export class Worker {
   private isRunning: boolean = false;
-  private queue: MessageQueue;
+  private queue: IQueueService<ScreenshotQueueJob, ProcessedScreenshotResult>;
   private jobProcessor: JobProcessor;
   private screenshotService: ScreenshotService;
+  private pluginFileService: PluginFileService;
   private config = Config.getInstance().config;
   private browserPool: BrowserPool;
 
@@ -31,18 +37,26 @@ export class Worker {
       this.config.aws.bucket
     );
 
+    const pluginS3Service = new S3Service(
+      s3Client,
+      this.config.aws.pluginsBucket
+    );
+
     this.screenshotService = new ScreenshotService(s3Service);
+    this.pluginFileService = new PluginFileService(pluginS3Service);
+
 
     // Initialize browser pool with config
     this.browserPool = new BrowserPool(this.config.browserPool);
 
     // Initialize the message queue
-    this.queue = new MessageQueue(
+    this.queue = new QueueService<ScreenshotQueueJob, ProcessedScreenshotResult>(
       QueueName.SCREENSHOT_JOBS,
+      this.config.redis,
       this.processJob.bind(this)
     );
-    
-    loggerWithContext.info({ 
+
+    loggerWithContext.info({
       redisHost: this.config.redis.host,
       redisPort: this.config.redis.port,
       queueName: QueueName.SCREENSHOT_JOBS,
@@ -53,6 +67,7 @@ export class Worker {
     this.jobProcessor = new JobProcessor(
       this.screenshotService,
       this.browserPool,
+      this.pluginFileService,
       new Liquid({
         strictFilters: true,
         strictVariables: true,
@@ -107,52 +122,37 @@ export class Worker {
     }
   }
 
-  private async processJob(job: Job<{ id: string; data: JobPayload }>): Promise<void> {
-    const { id, data } = job.data; // Extract data from job object
-    const jobLogger = loggerWithContext.child({ jobId: id });
+  private async processJob(job: Job<ScreenshotQueueJob>): Promise<ProcessedScreenshotResult> {
+    const jobLogger = loggerWithContext.child({ jobId: job.id });
 
     try {
       jobLogger.info('Processing job');
 
-      // Process the job
-      const result = await this.jobProcessor.processJob(data);
+      // Process the job - access the screenshot job data from the job's data property
+      const result = await this.jobProcessor.processJob(job.id!, job.data);
 
       jobLogger.info(
         { imageKey: result.imageKey },
         'Job completed successfully'
       );
+      return result;
     } catch (error) {
       jobLogger.error(
         { error: error instanceof Error ? error.message : 'Unknown error' },
         'Error processing job'
       );
       throw error;
-    } finally {
-      // Clean up the temporary zip file if it exists
-      if (data.tmpZipPath) {
-        try {
-          await fs.unlink(data.tmpZipPath);
-        } catch (error) {
-          jobLogger.warn(
-            { error: error instanceof Error ? error.message : 'Unknown error' },
-            'Failed to clean up temporary zip file'
-          );
-        }
-      }
     }
   }
 
-  async addJob(data: JobPayload): Promise<string> {
+  async addJob(id: string, data: ScreenshotQueueJob): Promise<string> {
     if (!this.isRunning) {
       throw new Error('Worker is not running');
     }
 
     // Add the job to the queue
-    const job = await this.queue.addJob({
-      id: data.id,
-      data
-    });
+    const job = await this.queue.addJob(id, data);
 
-    return job.id || '';
+    return job;
   }
 }

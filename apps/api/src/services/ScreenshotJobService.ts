@@ -2,15 +2,15 @@ import { db } from '../config/Database.js';
 import { ScreenshotJob, JobStatus } from '../models/ScreenshotJob.js';
 import { IScreenshotJobService } from '../interfaces/IScreenshotJobService.js';
 import { v4 as uuidv4 } from 'uuid';
-import { ScreenshotJob as SharedScreenshotJob, ProcessedScreenshotResult, QueueJobData } from '@terminal-agent/shared';
+import { ScreenshotQueueJob, ProcessedScreenshotResult } from '@terminal-agent/shared';
 import { IQueueService } from '@terminal-agent/shared';
 
 export class ScreenshotJobService implements IScreenshotJobService {
   private tableName = 'screenshot_jobs';
   
-  constructor(private queueService: IQueueService) {}
+  constructor(private queueService: IQueueService<ScreenshotQueueJob, ProcessedScreenshotResult>) {}
 
-  async createJob(jobData: Omit<SharedScreenshotJob, 'id' | 'tmpZipPath'>): Promise<ScreenshotJob> {
+  async createJob(jobData: ScreenshotQueueJob): Promise<ScreenshotJob> {
     const id = uuidv4();
     const now = new Date();
     
@@ -38,15 +38,14 @@ export class ScreenshotJobService implements IScreenshotJobService {
     const result = await db.getPool().query(query, values);
     const job = new ScreenshotJob(this.mapDbRowToJob(result.rows[0]));
     
-    // Add job to the queue for processing
-    const jobDataToQueue: Omit<QueueJobData, 'jobId'> = {
-      payload: {
-        deviceProfile: jobData.deviceProfile,
-        colorScheme: jobData.colorScheme,
-      },
+    // Create a complete job object for the queue
+    const jobForQueue: ScreenshotQueueJob = {
+      pluginUuid: jobData.pluginUuid,
+      deviceProfile: jobData.deviceProfile,
+      colorScheme: jobData.colorScheme,
     };
     
-    await this.queueService.addJob(jobDataToQueue, { jobId: job.id });
+    await this.queueService.addJob(id, jobForQueue);
     
     return job;
   }

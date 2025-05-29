@@ -1,3 +1,5 @@
+import { Readable } from "stream";
+
 /**
  * Interface for plugin file operations
  */
@@ -23,6 +25,13 @@ export interface IPluginFileService {
      * @returns The presigned URL
      */
     getPluginDownloadUrl(uuid: string, expiresIn?: number): Promise<string>;
+
+    /**
+     * Download a plugin zip file for a specific UUID
+     * @param uuid The UUID of the plugin
+     * @returns The file buffer
+     */
+    downloadPluginZip(uuid: string): Promise<Readable>;
 
     /**
      * Check if a plugin zip file exists

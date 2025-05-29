@@ -2,12 +2,14 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { IScreenshotJobService } from '../../interfaces/IScreenshotJobService.js';
 import { ScreenshotJob } from '../../models/ScreenshotJob.js';
 import { IController } from '../IController.js';
-import { DeviceProfile, ColorScheme } from '@terminal-agent/shared';
-import { IQueueService } from '@terminal-agent/shared';
+import { ColorScheme } from '@terminal-agent/shared';
+import { IDeviceService } from '../../interfaces/IDeviceService.js';
 
 interface CreateScreenshotJobRequest {
-  deviceProfile: DeviceProfile;
+  deviceId: string;
   colorScheme?: ColorScheme;
+  pluginUuid: string;
+
 }
 
 interface ListJobsQuery {
@@ -18,8 +20,8 @@ interface ListJobsQuery {
 export class ScreenshotJobController implements IController {
   constructor(
     private screenshotJobService: IScreenshotJobService,
-    private queueService: IQueueService
-  ) {}
+    private deviceService: IDeviceService,
+  ) { }
 
   private toResponse(job: ScreenshotJob) {
     return {
@@ -41,16 +43,31 @@ export class ScreenshotJobController implements IController {
     reply: FastifyReply
   ) {
     try {
-      const { deviceProfile, colorScheme } = request.body;
-      
+      const { deviceId, colorScheme, pluginUuid } = request.body;
+
+      const device = await this.deviceService.getDevice(deviceId);
+
+      if (!device) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Device with id ${deviceId} not found`
+        });
+      }
+
       // Create the job in the database
       const job = await this.screenshotJobService.createJob({
-        deviceProfile,
+        deviceProfile: {
+          width: device.width || 800,
+          height: device.height || 600,
+          format: "png"
+        },
         colorScheme,
+        pluginUuid,
       });
-      
+
       // The job is automatically added to the queue by the service
-      
+
       return reply.code(201).send(this.toResponse(job));
     } catch (error) {
       request.log.error({ error }, 'Failed to create screenshot job');
@@ -65,11 +82,11 @@ export class ScreenshotJobController implements IController {
     try {
       const { id } = request.params;
       const job = await this.screenshotJobService.getJobById(id);
-      
+
       if (!job) {
         return reply.code(404).send({ error: 'Job not found' });
       }
-      
+
       return reply.code(200).send(this.toResponse(job));
     } catch (error) {
       request.log.error({ error, jobId: request.params.id }, 'Failed to get job');
@@ -84,7 +101,7 @@ export class ScreenshotJobController implements IController {
     try {
       const { limit = 10, offset = 0 } = request.query;
       const { jobs, total } = await this.screenshotJobService.listJobs(limit, offset);
-      
+
       return {
         data: jobs.map(job => this.toResponse(job)),
         meta: {
@@ -110,27 +127,13 @@ export class ScreenshotJobController implements IController {
           tags: ['Screenshot Job Internal'],
           body: {
             type: 'object',
-            required: ['deviceProfile'],
+            required: ['deviceId', 'pluginUuid'],
             properties: {
-              deviceProfile: {
-                type: 'object',
-                properties: {
-                  width: { type: 'number' },
-                  height: { type: 'number' },
-                  format: { type: 'string', enum: ['bmp', 'png'] }
-                },
-                required: ['width', 'height', 'format']
-              },
+              deviceId: { type: 'string' },
+              pluginUuid: { type: 'string' },
               colorScheme: {
-                type: 'object',
-                properties: {
-                  type: { type: 'string', enum: ['rgb565', 'rgba8888', 'indexed8', 'grayscale'] },
-                  palette: { 
-                    type: 'array',
-                    items: { type: 'string' }
-                  }
-                },
-                required: ['type']
+                type: 'string',
+                enum: ["rgb565", "rgba8888", "indexed8", "grayscale"]
               }
             }
           },

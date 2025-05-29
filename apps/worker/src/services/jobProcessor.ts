@@ -4,10 +4,13 @@ import * as unzipper from 'unzipper'; // Using namespace import for types
 import { Liquid } from 'liquidjs';
 import sharp from 'sharp';
 import { Page } from 'playwright';
-import { JobPayload, ProcessedJobResult } from '../types/job';
-import { logger } from '../utils/logger';
-import { IScreenshotService } from '../interfaces/IScreenshotService';
-import { IBrowserPool } from '../interfaces/IBrowserPool';
+import { ScreenshotQueueJob, ProcessedScreenshotResult } from '@terminal-agent/shared';
+import { logger } from '../utils/logger.js';
+import { IScreenshotService } from '../interfaces/IScreenshotService.js';
+import { IBrowserPool } from '../interfaces/IBrowserPool.js';
+import { IPluginFileService } from '@terminal-agent/shared';
+import { createWriteStream } from 'fs';
+import os from 'os';
 
 const loggerWithContext = logger.child({ module: 'job-processor' });
 
@@ -17,11 +20,12 @@ export class JobProcessor {
   constructor(
     private readonly screenshotService: IScreenshotService,
     private readonly browserPool: IBrowserPool,
+    private readonly pluginFileService: IPluginFileService,
     private readonly liquidEngine: Liquid = new Liquid({
       strictFilters: true,
       strictVariables: true,
     })
-  ) {}
+  ) { }
 
   /**
    * Clean up resources when the processor is no longer needed
@@ -30,40 +34,52 @@ export class JobProcessor {
     // BrowserPool manages its own cleanup
   }
 
-  async processJob(payload: JobPayload): Promise<ProcessedJobResult> {
+  async processJob(jobId: string, payload: ScreenshotQueueJob): Promise<ProcessedScreenshotResult> {
     // 1. Create a temporary directory for extraction
-    const tempDir = `/tmp/${payload.id}`;
+    const tempDirPath = os.tmpdir();
+    const tempDir = `${tempDirPath}/${jobId}`;
     let page: Page | null = null;
-    
+
     try {
       await mkdir(tempDir, { recursive: true });
-      
+
       // 2. Get a page from the browser pool
       page = await this.browserPool.getPage();
       if (!page) {
         throw new Error('Failed to get a browser page from the pool');
       }
-      
-      // 3. Extract the ZIP file
-      await this.extractZip(payload.tmpZipPath, tempDir);
 
-      // 4. Render Liquid template
-      const html = await this.renderLiquidTemplate(join(tempDir, 'index.liquid'), {});
+      // 3. Download the plugin zip file
+      const zipFile = await this.pluginFileService.downloadPluginZip(payload.pluginUuid);
+      const zipPath = join(tempDir, 'plugin.zip');
+      const writeStream = createWriteStream(zipPath);
+      await new Promise((resolve, reject) => {
+        zipFile.pipe(writeStream)
+          .on('finish', resolve as () => void)
+          .on('error', reject);
+      });
 
-      // 5. Take screenshot with Playwright
+      // 4. Extract the ZIP file
+      const pluginDir = `${tempDir}/plugin`;
+      await this.extractZip(zipPath, pluginDir);
+
+      // 5. Render Liquid template
+      const html = await this.renderLiquidTemplate(join(pluginDir, 'index.liquid'), {});
+
+      // 6. Take screenshot with Playwright
       const screenshot = await this.takeScreenshot(page, html, payload.deviceProfile);
 
-      // 6. Process the image with Sharp
+      // 7. Process the image with Sharp
       const processedImage = await this.processImage(
         screenshot,
         payload.deviceProfile,
         payload.colorScheme
       );
 
-      // 7. Upload to S3 bucket using ScreenshotService
+      // 8. Upload to S3 bucket using ScreenshotService
       const imageKey = await this.screenshotService.uploadScreenshot(
         processedImage,
-        `generated/${Date.now()}_${payload.id}.${payload.deviceProfile.format}`,
+        `generated/${Date.now()}_${jobId}.${payload.deviceProfile.format}`,
         `image/${payload.deviceProfile.format}`
       );
 
@@ -78,16 +94,12 @@ export class JobProcessor {
       };
     } catch (error) {
       loggerWithContext.error(
-        { error, jobId: payload.id },
+        { error, jobId },
         'Error processing job'
       );
       throw error;
     } finally {
-      // Cleanup resources - page will be automatically closed by the browser pool
-      if (page) {
-        await page.close().catch(() => {});
-      }
-      await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+      await rm(tempDir, { recursive: true, force: true }).catch(() => { });
     }
   }
 
@@ -120,20 +132,57 @@ export class JobProcessor {
     deviceProfile: { width: number; height: number }
   ): Promise<Buffer> {
     try {
-      await page.setContent(html, { waitUntil: 'networkidle' });
+      // Set up error handling for page errors
+      const errors: string[] = [];
+      page.on('pageerror', (error) => {
+        loggerWithContext.error({ error: error.message }, 'Page error occurred');
+        errors.push(error.message);
+      });
+
+      // Set up request failed handler
+      page.on('requestfailed', (request) => {
+        loggerWithContext.warn(
+          { 
+            url: request.url(),
+            failure: request.failure()?.errorText,
+            resourceType: request.resourceType()
+          },
+          'Request failed'
+        );
+      });
+
+      // Set viewport size first
       await page.setViewportSize({
         width: deviceProfile.width,
         height: deviceProfile.height,
       });
 
-      // Add a small delay to ensure rendering is complete
-      await page.waitForTimeout(100);
+      // Set content with error handling and increased timeout
+      await page.setContent(html, { 
+        waitUntil: 'networkidle',
+        timeout: 60000 // 60 seconds
+      });
 
-      return await page.screenshot({
+      // Wait for any lazy-loaded content
+      await page.waitForLoadState('networkidle');
+      
+      // Wait a bit more for any JavaScript to finish executing
+      await page.waitForTimeout(1000);
+
+      // Log any errors that occurred during page load
+      if (errors.length > 0) {
+        loggerWithContext.warn({ errors }, 'Page loaded with errors');
+      }
+
+      // Take the screenshot
+      const screenshot = await page.screenshot({
         type: 'png', // Always capture as PNG first, we'll convert later if needed
         fullPage: false,
         animations: 'disabled',
+        timeout: 30000 // 30 seconds
       });
+      
+      return screenshot;
     } catch (error) {
       loggerWithContext.error({ error }, 'Error taking screenshot');
       throw new Error(`Failed to take screenshot: ${error instanceof Error ? error.message : String(error)}`);

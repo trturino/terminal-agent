@@ -1,4 +1,4 @@
-import pino from 'pino';
+import { pino } from 'pino';
 
 // Create a base logger instance that can be extended
 const logger = pino({

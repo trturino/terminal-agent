@@ -20,6 +20,7 @@ export interface AwsConfig {
   accessKeyId: string;
   secretAccessKey: string;
   bucket: string;
+  pluginsBucket: string;
   forcePathStyle: boolean;
 }
 
@@ -65,13 +66,32 @@ export class Config {
         poolSize: parseInt(process.env.POOL_SIZE || '6', 10),
         maxContexts: parseInt(process.env.MAX_CONTEXTS || '500', 10),
         chromiumArgs: [
+          // Allow Playwright to run the browser in a sandboxed environment.
+          // This is a security feature to prevent malicious websites from
+          // accessing sensitive information.
           '--no-sandbox',
+          // Disable the setuid sandbox (Linux only).
+          // This is a security feature to prevent malicious websites from
+          // accessing sensitive information.
           '--disable-setuid-sandbox',
+          // Disable the /dev/shm partition (Linux only).
+          // This is a security feature to prevent malicious websites from
+          // accessing sensitive information.
           '--disable-dev-shm-usage',
+          // Disable hardware acceleration for the 2D canvas.
+          // This is a performance feature to improve rendering performance.
           '--disable-accelerated-2d-canvas',
+          // Disable the first-run dialog that asks the user to
+          // set a default browser.
           '--no-first-run',
+          // Disable the zygote process (Linux only).
+          // This is a performance feature to improve startup performance.
           '--no-zygote',
+          // Run the browser in a single process.
+          // This is a performance feature to improve startup performance.
           '--single-process',
+          // Disable the GPU process.
+          // This is a performance feature to improve startup performance.
           '--disable-gpu',
           ...(process.env.PLAYWRIGHT_CHROMIUM_ARGS?.split(' ') || [])
         ],
@@ -83,7 +103,8 @@ export class Config {
         endpoint: process.env.AWS_ENDPOINT,
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-        bucket: process.env.S3_BUCKET || 'terminal-images',
+        bucket: process.env.S3_BUCKET_NAME || 'terminal-images',
+        pluginsBucket: process.env.S3_PLUGINS_BUCKET_NAME || 'terminal-agent-plugins',
         forcePathStyle: process.env.AWS_FORCE_PATH_STYLE === 'true' || false
       }
     };
