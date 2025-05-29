@@ -1,5 +1,6 @@
-import { mkdir, rm } from 'fs/promises';
-import { join } from 'path';
+import { mkdir, rm, readFile } from 'fs/promises';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import * as unzipper from 'unzipper'; // Using namespace import for types
 import { Liquid } from 'liquidjs';
 import sharp from 'sharp';
@@ -12,10 +13,15 @@ import { IPluginFileService } from '@terminal-agent/shared';
 import { createWriteStream } from 'fs';
 import os from 'os';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const loggerWithContext = logger.child({ module: 'job-processor' });
 
 export class JobProcessor {
   private jobsProcessed: number = 0;
+
+  private template: string | null = null;
 
   constructor(
     private readonly screenshotService: IScreenshotService,
@@ -25,7 +31,19 @@ export class JobProcessor {
       strictFilters: true,
       strictVariables: true,
     })
-  ) { }
+  ) {
+    this.loadTemplate();
+  }
+
+  private async loadTemplate(): Promise<void> {
+    try {
+      const templatePath = join(__dirname, '../templates/plugin-wrapper.html');
+      this.template = await readFile(templatePath, 'utf-8');
+    } catch (error) {
+      loggerWithContext.error({ error }, 'Failed to load HTML template');
+      throw new Error('Failed to load HTML template');
+    }
+  }
 
   /**
    * Clean up resources when the processor is no longer needed
@@ -64,19 +82,25 @@ export class JobProcessor {
       await this.extractZip(zipPath, pluginDir);
 
       // 5. Render Liquid template
-      const html = await this.renderLiquidTemplate(join(pluginDir, 'index.liquid'), {});
+      const liquidHtml = await this.renderLiquidTemplate(join(pluginDir, 'index.liquid'), {});
+      
+      // 6. Wrap the rendered content in the HTML template
+      if (!this.template) {
+        await this.loadTemplate();
+      }
+      const finalHtml = this.template!.replace('{{content}}', liquidHtml);
 
-      // 6. Take screenshot with Playwright
-      const screenshot = await this.takeScreenshot(page, html, payload.deviceProfile);
+      // 7. Take screenshot with Playwright
+      const screenshot = await this.takeScreenshot(page, finalHtml, payload.deviceProfile);
 
-      // 7. Process the image with Sharp
+      // 8. Process the image with Sharp
       const processedImage = await this.processImage(
         screenshot,
         payload.deviceProfile,
         payload.colorScheme
       );
 
-      // 8. Upload to S3 bucket using ScreenshotService
+      // 9. Upload to S3 bucket using ScreenshotService
       const imageKey = await this.screenshotService.uploadScreenshot(
         processedImage,
         `generated/${Date.now()}_${jobId}.${payload.deviceProfile.format}`,
