@@ -7,6 +7,6 @@ export class HealthController implements IController {
   }
 
   private async healthCheck(_req: FastifyRequest, reply: FastifyReply): Promise<void> {
-    return reply.send({ status: 'ok', time: new Date().toISOString() });
+    return reply.send({ status: 'ok', timestamp: new Date().toISOString() });
   }
 }

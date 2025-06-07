@@ -1,4 +1,4 @@
-import Fastify, { fastify, FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import { Config } from './config/Config.js';
 import { HealthController } from './controllers/api/HealthController.js';
 import { DeviceController } from './controllers/api/DeviceController.js';

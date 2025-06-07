@@ -9,24 +9,14 @@ This package is part of the monorepo and will be automatically linked. No need t
 ## Usage
 
 ```typescript
-import { Message, TaskMessage, TaskResultMessage, schemas } from '@terminal-agent/shared';
+import { S3Service, FileService } from '@terminal-agent/shared';
+import { S3Client } from '@aws-sdk/client-s3';
 
-// Create a task message
-const task: TaskMessage = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
-  type: 'command',
-  command: 'ls',
-  args: ['-la'],
-  cwd: '/home/user',
-};
+const s3 = new S3Client({ region: 'us-east-1' });
+const s3Service = new S3Service(s3, 'my-bucket');
+const fileService = new FileService(s3Service);
 
-// Validate a message
-const result = schemas.TaskMessageSchema.safeParse(task);
-if (result.success) {
-  console.log('Valid task message:', result.data);
-} else {
-  console.error('Invalid task message:', result.error);
-}
+await fileService.uploadFile('device123', Buffer.from('hello'), 'example.txt');
 ```
 
 ## Development
