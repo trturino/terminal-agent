@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug API",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"],
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/apps/api/.env",
+      "preLaunchTask": "docker-compose up"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Worker",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"],
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}/apps/worker",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/apps/worker/.env",
+      "preLaunchTask": "docker-compose up"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug All",
+      "configurations": ["Debug API", "Debug Worker"]
+    },
+    {
+      "name": "Start Docker Services",
+      "configurations": [],
+      "preLaunchTask": "docker-compose up"
+    }
+  ]
+}
