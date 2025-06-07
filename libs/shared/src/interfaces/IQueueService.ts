@@ -14,6 +14,4 @@ export interface IQueueService<T, R> {
   getJobCounts?(): Promise<{ active: number; completed: number; failed: number; delayed: number; waiting: number; }>;
 
   clean?(grace?: number, limit?: number): Promise<void>;
-
-  close(): Promise<void>;
 }
